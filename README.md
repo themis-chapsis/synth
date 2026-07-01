@@ -5,12 +5,13 @@ panel of a classic 1983 6-operator FM synthesizer, wired to a custom FM
 sound engine built on the Web Audio API (AudioWorklet). No frameworks, no
 prebuilt synth libraries.
 
-EDIT / COMPARE / FUNCTION / STORE transitions, per-mode button routing,
-memory select/protect with lit indicators, the store flow with LED blink
-and protect blocking, and mode-accurate LCD/LED content. No sound yet;
-the 155-parameter voice model arrives in milestone 3, audio in 4+. See
-`reference/README.md` for reference-material status and items pending
-verification. Run the state machine tests with `npm test`.
+Status: **milestone 3** — the full mode state machine (PLAY / EDIT /
+COMPARE / FUNCTION / STORE) drives mode-accurate LCD/LED content, and the
+complete 155-parameter voice model is live: NO/YES step and DATA ENTRY
+absolutely positions the selected parameter, COMPARE shows the unedited
+voice, STORE writes to the banks. No sound yet; audio starts in
+milestone 4. See `reference/README.md` for reference-material status and
+items pending verification. Run the tests with `npm test`.
 
 ## Running
 

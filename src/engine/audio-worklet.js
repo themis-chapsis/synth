@@ -1,5 +1,46 @@
 /**
- * AudioWorklet registration entry (spec 10.1): registers the `dx7-processor`
- * worklet module on an AudioContext. Milestone 4 deliverable.
+ * Engine front-end (spec 10.1, 14): owns the AudioContext, registers the
+ * dx7-processor worklet, and builds the audio graph
+ *
+ *   dx7-processor -> masterGain (VOLUME) -> destination
+ *
+ * No effects, no reverb (spec 14). Creation must happen from a user
+ * gesture so the context starts unmuted.
  */
-export async function createEngine() { throw new Error('engine lands in milestone 4'); }
+
+/**
+ * @param {number} initialVolume 0-1 master gain (VOLUME slider position)
+ * @returns {Promise<{
+ *   ctx: AudioContext,
+ *   node: AudioWorkletNode,
+ *   masterGain: GainNode,
+ *   noteOn: (note: number, velocity?: number) => void,
+ *   noteOff: (note: number) => void,
+ *   allOff: () => void,
+ *   setVolume: (v: number) => void
+ * }>}
+ */
+export async function createEngine(initialVolume = 0.8) {
+  const ctx = new AudioContext();
+  await ctx.audioWorklet.addModule(new URL('./dx7-processor.js', import.meta.url));
+
+  const node = new AudioWorkletNode(ctx, 'dx7-processor', {
+    numberOfInputs: 0,
+    numberOfOutputs: 1,
+    outputChannelCount: [1]
+  });
+  const masterGain = ctx.createGain();
+  masterGain.gain.value = initialVolume;
+  node.connect(masterGain).connect(ctx.destination);
+  await ctx.resume();
+
+  return {
+    ctx,
+    node,
+    masterGain,
+    noteOn: (note, velocity = 100) => node.port.postMessage({ type: 'noteOn', note, velocity }),
+    noteOff: (note) => node.port.postMessage({ type: 'noteOff', note }),
+    allOff: () => node.port.postMessage({ type: 'allOff' }),
+    setVolume: (v) => masterGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01)
+  };
+}

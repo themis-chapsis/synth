@@ -12,6 +12,7 @@ import { LCD } from './panel/LCD.js';
 import { SevenSegment } from './panel/SevenSegment.js';
 import { sliders, modeButtons, numberedButtons, display } from './panel/panelLayout.js';
 import { store } from './state/store.js';
+import { createEngine } from './engine/audio-worklet.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XHTML_NS = 'http://www.w3.org/1999/xhtml';
@@ -40,13 +41,25 @@ function boot() {
   finalizeSilkscreen(svg);
   document.fonts.ready.then(() => finalizeSilkscreen(svg));
 
+  // Audio starts lazily on the first user gesture (browser autoplay
+  // policy); until then VOLUME just remembers its position.
+  let engine = null;
+  let enginePromise = null;
+  let volume = sliders.find((s) => s.id === 'volume').initial;
+  const ensureEngine = () => {
+    enginePromise ??= createEngine(volume).then((e) => (engine = e));
+    return enginePromise;
+  };
+  window.addEventListener('pointerdown', ensureEngine, { once: true });
+  window.addEventListener('keydown', ensureEngine, { once: true });
+
   for (const def of sliders) {
     new Slider(slots.get(def.id), def, (v) => {
       if (def.id === 'data-entry') {
         store.dispatch({ type: 'dataEntry', value: v });
       } else {
-        // VOLUME feeds the master gain node from milestone 4 on.
-        console.debug(`[slider] ${def.id} = ${v.toFixed(3)}`);
+        volume = v;
+        engine?.setVolume(v);
       }
     });
   }
@@ -73,7 +86,7 @@ function boot() {
   sync(store.getState());
 
   // Debug/testing handle (used by the headless interaction checks).
-  window.__fm6 = { store };
+  window.__fm6 = { store, ensureEngine, get engine() { return engine; } };
 }
 
 boot();

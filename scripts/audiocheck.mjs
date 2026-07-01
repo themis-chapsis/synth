@@ -1,0 +1,81 @@
+/**
+ * Audio integration check (spec 15.3 groundwork): boots the app in
+ * headless Chromium with autoplay allowed, starts the engine, plays
+ * middle C, and verifies from captured samples that
+ *   1. the engine produces signal at the expected frequency,
+ *   2. the VOLUME slider value scales the output level,
+ *   3. noteOff silences the voice.
+ *
+ * Usage: node scripts/audiocheck.mjs [url]   (default vite preview URL)
+ */
+import { chromium } from 'playwright';
+
+const url = process.argv[2] ?? 'http://localhost:4173';
+
+const browser = await chromium.launch({
+  executablePath: '/opt/pw-browsers/chromium',
+  args: ['--autoplay-policy=no-user-gesture-required']
+});
+const page = await browser.newPage();
+page.on('pageerror', (e) => console.error('pageerror:', e.message));
+await page.goto(url, { waitUntil: 'networkidle' });
+
+const result = await page.evaluate(async () => {
+  const { ensureEngine } = window.__fm6;
+  await ensureEngine();
+  const engine = window.__fm6.engine;
+  const { ctx, masterGain } = engine;
+
+  // Tap the post-VOLUME signal.
+  const tap = ctx.createAnalyser();
+  tap.fftSize = 8192;
+  masterGain.connect(tap);
+  const buf = new Float32Array(tap.fftSize);
+
+  const capture = () => {
+    tap.getFloatTimeDomainData(buf);
+    let sum = 0;
+    let crossings = 0;
+    for (let i = 0; i < buf.length; i++) {
+      sum += buf[i] * buf[i];
+      if (i > 0 && buf[i - 1] < 0 && buf[i] >= 0) crossings++;
+    }
+    return {
+      rms: Math.sqrt(sum / buf.length),
+      freq: (crossings * ctx.sampleRate) / buf.length
+    };
+  };
+  const settle = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  engine.noteOn(60, 100); // middle C ~261.63 Hz
+  await settle(300);
+  const loud = capture();
+
+  engine.setVolume(0.2);
+  await settle(300);
+  const quiet = capture();
+
+  engine.setVolume(0.8);
+  engine.noteOff(60);
+  await settle(300);
+  const silent = capture();
+
+  return { sampleRate: ctx.sampleRate, loud, quiet, silent };
+});
+
+await browser.close();
+
+const problems = [];
+const { loud, quiet, silent } = result;
+if (!(loud.rms > 0.02)) problems.push(`no signal while gated on (rms=${loud.rms})`);
+if (Math.abs(loud.freq - 261.63) > 8) problems.push(`frequency off: ${loud.freq.toFixed(1)} Hz, expected ~261.6`);
+const ratio = quiet.rms / loud.rms;
+if (!(ratio > 0.15 && ratio < 0.4)) problems.push(`volume scaling off: quiet/loud=${ratio.toFixed(3)}, expected ~0.25`);
+if (!(silent.rms < 1e-4)) problems.push(`voice not silent after noteOff (rms=${silent.rms})`);
+
+console.log(JSON.stringify(result, null, 2));
+if (problems.length) {
+  console.error('FAIL:\n' + problems.join('\n'));
+  process.exit(1);
+}
+console.log('audio check OK');
