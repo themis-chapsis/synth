@@ -142,15 +142,17 @@ export function voiceName(voice) {
 /**
  * Resolve the EDIT-mode selection (button, sub-cycle, selected operator)
  * to a voice parameter id, or null when the selection is not a directly
- * adjustable value (voice name entry arrives in a later milestone).
+ * adjustable value.
  *
  * @param {{action:string, param:string}|null} entry buttonMap editMap entry
  * @param {number} sub cycle index
  * @param {number} op selected operator 1-6
+ * @param {number} [nameCursor] cursor position 0-9 during voice-name edit
  * @returns {string|null}
  */
-export function editTargetId(entry, sub, op) {
+export function editTargetId(entry, sub, op, nameCursor = 0) {
   if (!entry || entry.action === 'opOnOff') return null;
+  if (entry.param === 'voiceName') return `name${nameCursor}`;
   switch (entry.param) {
     case 'algorithm': return 'algorithm';
     case 'feedback': return 'feedback';

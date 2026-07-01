@@ -26,12 +26,13 @@ const valueRow = (text) => (/^[+-]?\d+$/.test(text) ? text.padStart(8) : ' '.rep
 /** EDIT/COMPARE screen: parameter title + value from the given buffer. */
 function editScreen(state, buffer) {
   const entry = editMap[state.editParam - 1];
-  const id = editTargetId(entry, state.editSub, state.selectedOp);
-  if (id == null) {
-    // Button 32: voice name display (name entry arrives in milestone 11).
-    if (entry?.param === 'voiceName') return ['VOICE NAME', ' '.repeat(6) + voiceName(buffer)];
-    return ['EDIT', ''];
+  // Button 32: whole-name display; the blinking cursor marks the
+  // character NO/YES/DATA ENTRY edit (position advances on re-press).
+  if (entry?.param === 'voiceName') {
+    return ['VOICE NAME', ' '.repeat(6) + voiceName(buffer)];
   }
+  const id = editTargetId(entry, state.editSub, state.selectedOp, state.nameCursor);
+  if (id == null) return ['EDIT', ''];
   const idx = paramIndex.get(id);
   const def = voiceParamDefs[idx];
   return [def.name, valueRow(def.display(buffer[idx]))];

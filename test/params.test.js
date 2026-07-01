@@ -148,12 +148,14 @@ describe('FUNCTION values', () => {
     expect(row(1)).toBe('      AVAIL     ');
   });
 
-  it('confirm-style entries show no value row', () => {
-    press('btn-10'); // VOICE INIT ?
-    expect(row(0)).toBe('VOICE INIT ?    ');
+  it('status-style entries show no value row and ignore YES', () => {
+    press('btn-14'); // battery check, display only
+    expect(row(0)).toBe('BATTERY VOLT=3.9');
     expect(row(1)).toBe('                ');
-    press('yes'); // no value to adjust; must not throw or change mode
+    press('yes'); // nothing to adjust or confirm here
     expect(state().mode).toBe('FUNCTION');
+    // Confirm-style entries (voice init, recall, cartridge ops) are
+    // covered in functions.test.js.
   });
 });
 

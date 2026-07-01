@@ -49,8 +49,11 @@ export function createStore() {
     opOnOff: [true, true, true, true, true, true],
     editParam: 7, // last selected edit button (7 = algorithm)
     editSub: 0, // cycle index for multi-press buttons (EG RATE 1-4 etc.)
+    nameCursor: 0, // voice-name edit position 0-9
     functionParam: 1,
     functionSub: 0,
+    /** edit buffer preserved when a patch load overwrites unsaved edits */
+    recallVoice: null,
 
     /** transient full-screen LCD notice (e.g. MEMORY PROTECTED) */
     notice: null,
@@ -102,6 +105,10 @@ export function createStore() {
   }
 
   function loadPatch(n) {
+    // Preserve unsaved edits for EDIT RECALL before overwriting.
+    if (state.voice.some((v, i) => v !== state.compareVoice[i])) {
+      state.recallVoice = state.voice.slice();
+    }
     state.currentPatch = n;
     const stored = state.banks[state.bank][n - 1];
     state.voice = stored ? stored.slice() : initVoice();
@@ -111,7 +118,7 @@ export function createStore() {
   /** The parameter currently addressed by NO/YES/DATA ENTRY, if any. */
   function selectedTarget() {
     if (state.mode === PanelMode.EDIT) {
-      const id = editTargetId(editMap[state.editParam - 1], state.editSub, state.selectedOp);
+      const id = editTargetId(editMap[state.editParam - 1], state.editSub, state.selectedOp, state.nameCursor);
       if (id == null) return null;
       const idx = paramIndex.get(id);
       return { kind: 'voice', idx, def: voiceParamDefs[idx] };
@@ -145,6 +152,11 @@ export function createStore() {
         const entry = editMap[n - 1];
         if (entry.action === 'opOnOff') {
           state.opOnOff[entry.op - 1] = !state.opOnOff[entry.op - 1];
+        } else if (entry.param === 'voiceName') {
+          // Re-pressing VOICE NAME advances the character cursor
+          // (PROVISIONAL name-entry scheme pending the manual).
+          state.nameCursor = state.editParam === 32 ? (state.nameCursor + 1) % 10 : 0;
+          state.editParam = 32;
         } else {
           // Re-pressing a multi-function button cycles its sub-parameter.
           if (state.editParam === n && entry.cycles) {
@@ -236,6 +248,54 @@ export function createStore() {
     setTargetValue(target, current + delta);
   }
 
+  /**
+   * Confirm-style FUNCTION entries executed by YES (spec 5.9 / manual
+   * function chapter). Returns true when the press was consumed.
+   */
+  function confirmFunction() {
+    if (state.mode !== PanelMode.FUNCTION) return false;
+    const entry = functionMap[state.functionParam - 1];
+    switch (entry?.param) {
+      case 'editRecall':
+        if (!state.recallVoice) return true;
+        state.voice = state.recallVoice.slice();
+        state.compareVoice = state.recallVoice.slice();
+        enterMode(PanelMode.EDIT);
+        return true;
+      case 'voiceInit':
+        state.voice = initVoice();
+        state.compareVoice = initVoice();
+        enterMode(PanelMode.EDIT); // manual: voice init activates EDIT
+        return true;
+      case 'cartridgeForm':
+        if (state.memoryProtect.cartridge) {
+          state.notice = ['MEMORY PROTECTED', ''];
+        } else {
+          state.banks.cartridge = Array.from({ length: 32 }, () => initVoice());
+          state.notice = [' FORMATTED', ''];
+        }
+        return true;
+      case 'cartridgeSave': // internal bank -> cartridge
+        if (state.memoryProtect.cartridge) {
+          state.notice = ['MEMORY PROTECTED', ''];
+        } else {
+          state.banks.cartridge = state.banks.internal.map((v) => v && v.slice());
+          state.notice = [' SAVE COMPLETED', ''];
+        }
+        return true;
+      case 'cartridgeLoad': // cartridge -> internal bank
+        if (state.memoryProtect.internal) {
+          state.notice = ['MEMORY PROTECTED', ''];
+        } else {
+          state.banks.internal = state.banks.cartridge.map((v) => v && v.slice());
+          state.notice = [' LOAD COMPLETED', ''];
+        }
+        return true;
+      default:
+        return false; // value parameter: fall through to +1
+    }
+  }
+
   const buttonHandlers = {
     store: handleStore,
     'edit-compare': handleEditCompare,
@@ -246,7 +306,7 @@ export function createStore() {
     },
     yes: () => {
       if (state.mode === PanelMode.STORE) resolveStore(true);
-      else adjustParam(+1);
+      else if (!confirmFunction()) adjustParam(+1);
     },
     'mem-select-int': () => { state.notice = null; state.bank = 'internal'; },
     'mem-select-crt': () => { state.notice = null; state.bank = 'cartridge'; },

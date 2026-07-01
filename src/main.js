@@ -103,10 +103,18 @@ function boot() {
   const lcd = new LCD(htmlHost(slots.get('lcd'), display.lcd));
   const led = new SevenSegment(htmlHost(slots.get('led'), display.led), 2);
 
+  let cursorKey = null;
   const sync = (state) => {
     lcd.setText(state.lcd[0], state.lcd[1]);
     led.setText(state.led);
     led.setBlinking(state.ledBlinking);
+    // Blinking cursor during voice-name edit (spec 8.3).
+    const nameEditing = state.mode === 'EDIT' && state.editParam === 32 && !state.notice;
+    const key = nameEditing ? `1:${6 + state.nameCursor}` : null;
+    if (key !== cursorKey) {
+      cursorKey = key;
+      lcd.setCursor(nameEditing ? { row: 1, col: 6 + state.nameCursor } : null);
+    }
     // Active-bank and protect indicators (spec 5.5/5.6).
     buttons.get('mem-select-int').setLit(state.bank === 'internal');
     buttons.get('mem-select-crt').setLit(state.bank === 'cartridge');
