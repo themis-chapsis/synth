@@ -1,0 +1,18 @@
+{
+  "name": "fm6-panel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Study replica of a classic 1983 6-operator FM synthesizer control panel, with a custom Web Audio FM engine.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "screenshot": "node scripts/screenshot.mjs"
+  },
+  "devDependencies": {
+    "@fontsource/barlow-condensed": "^5.2.5",
+    "playwright": "^1.53.0",
+    "vite": "^7.0.0"
+  }
+}
