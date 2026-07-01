@@ -60,7 +60,40 @@ const result = await page.evaluate(async () => {
   await settle(300);
   const silent = capture();
 
-  return { sampleRate: ctx.sampleRate, loud, quiet, silent };
+  // Spec 13: parameter changes must reach the engine fast. Select OP1
+  // OUTPUT LEVEL in EDIT mode, hold a note, slam the value to 0 via DATA
+  // ENTRY, and time how long the output takes to start collapsing.
+  const { store } = window.__fm6;
+  store.dispatch({ type: 'panelButtonPressed', id: 'edit-compare' });
+  store.dispatch({ type: 'panelButtonPressed', id: 'btn-27' });
+  engine.noteOn(60, 100);
+  await settle(300);
+
+  // Short analysis window (512 samples ~ 11 ms) so the RMS tracks the
+  // output without dragging 200 ms of history behind it.
+  tap.fftSize = 512;
+  const fastBuf = new Float32Array(512);
+  const fastRms = () => {
+    tap.getFloatTimeDomainData(fastBuf);
+    let sum = 0;
+    for (const x of fastBuf) sum += x * x;
+    return Math.sqrt(sum / fastBuf.length);
+  };
+
+  const before = fastRms();
+  const t0 = performance.now();
+  store.dispatch({ type: 'dataEntry', value: 0 });
+  let paramLatencyMs = -1;
+  for (let t = 0; t < 400; t += 5) {
+    await settle(5);
+    if (fastRms() < before * 0.5) {
+      paramLatencyMs = performance.now() - t0;
+      break;
+    }
+  }
+  engine.noteOff(60);
+
+  return { sampleRate: ctx.sampleRate, loud, quiet, silent, paramLatencyMs };
 });
 
 await browser.close();
@@ -72,6 +105,10 @@ if (Math.abs(loud.freq - 261.63) > 8) problems.push(`frequency off: ${loud.freq.
 const ratio = quiet.rms / loud.rms;
 if (!(ratio > 0.15 && ratio < 0.4)) problems.push(`volume scaling off: quiet/loud=${ratio.toFixed(3)}, expected ~0.25`);
 if (!(silent.rms < 1e-4)) problems.push(`voice not silent after noteOff (rms=${silent.rms})`);
+// Budget: 16 ms batching + one block + output/analyser buffering slack.
+if (!(result.paramLatencyMs >= 0 && result.paramLatencyMs < 100)) {
+  problems.push(`parameter latency too high: ${result.paramLatencyMs} ms`);
+}
 
 console.log(JSON.stringify(result, null, 2));
 if (problems.length) {

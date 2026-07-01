@@ -98,7 +98,9 @@ function buildDefs() {
         op,
         name: `OP${op} ${t.name}`,
         range: t.range,
-        default: t.default,
+        // INIT VOICE is audible through OP1 only: its output level is 99
+        // while OP2-6 start at 0.
+        default: t.key === 'ol' && op === 1 ? 99 : t.default,
         display: t.display
       });
     }

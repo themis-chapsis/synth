@@ -35,7 +35,8 @@ describe('voice model shape (spec 7)', () => {
     const v = initVoice();
     expect(voiceName(v)).toBe('INIT VOICE');
     expect(v[paramIndex.get('algorithm')]).toBe(0); // algorithm 1
-    expect(v[paramIndex.get('op1_ol')]).toBe(0);
+    expect(v[paramIndex.get('op1_ol')]).toBe(99); // OP1 carries INIT VOICE
+    expect(v[paramIndex.get('op2_ol')]).toBe(0);
     expect(v[paramIndex.get('op1_fc')]).toBe(1);
     expect(v[paramIndex.get('op1_det')]).toBe(7); // center detune
     expect(v[paramIndex.get('peg_l4')]).toBe(50);
@@ -100,7 +101,7 @@ describe('EDIT value rows and adjustment', () => {
     press('operator-select'); // now OP2
     press('yes');
     expect(state().voice[paramIndex.get('op2_ol')]).toBe(1);
-    expect(state().voice[paramIndex.get('op1_ol')]).toBe(0);
+    expect(state().voice[paramIndex.get('op1_ol')]).toBe(99); // untouched
   });
 
   it('shows the voice name on button 32', () => {

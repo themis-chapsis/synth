@@ -13,6 +13,7 @@ import { SevenSegment } from './panel/SevenSegment.js';
 import { sliders, modeButtons, numberedButtons, display } from './panel/panelLayout.js';
 import { store } from './state/store.js';
 import { createEngine } from './engine/audio-worklet.js';
+import { installKeyboardMap } from './panel/keyboardMap.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XHTML_NS = 'http://www.w3.org/1999/xhtml';
@@ -46,12 +47,41 @@ function boot() {
   let engine = null;
   let enginePromise = null;
   let volume = sliders.find((s) => s.id === 'volume').initial;
+
+  // Voice parameter sync to the worklet, batched to one message per
+  // frame (spec 13: <=60 Hz, <20 ms parameter latency).
+  let syncQueued = false;
+  const syncVoice = () => {
+    if (!engine || syncQueued) return;
+    syncQueued = true;
+    setTimeout(() => {
+      syncQueued = false;
+      const s = store.getState();
+      engine.node.port.postMessage({
+        type: 'voice',
+        data: s.voice.slice(),
+        opOnOff: s.opOnOff.slice()
+      });
+    }, 16);
+  };
+
   const ensureEngine = () => {
-    enginePromise ??= createEngine(volume).then((e) => (engine = e));
+    enginePromise ??= createEngine(volume).then((e) => {
+      engine = e;
+      syncVoice();
+      return e;
+    });
     return enginePromise;
   };
   window.addEventListener('pointerdown', ensureEngine, { once: true });
   window.addEventListener('keydown', ensureEngine, { once: true });
+
+  installKeyboardMap({
+    noteOn: (note, velocity) => ensureEngine().then((e) => e.noteOn(note, velocity)),
+    noteOff: (note) => ensureEngine().then((e) => e.noteOff(note)),
+    adjust: (delta) => store.dispatch({ type: 'adjustParam', delta })
+  });
+  store.subscribe(syncVoice);
 
   for (const def of sliders) {
     new Slider(slots.get(def.id), def, (v) => {
