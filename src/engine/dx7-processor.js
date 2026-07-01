@@ -304,6 +304,54 @@ export class PitchEG {
   }
 }
 
+/**
+ * Keyboard level scaling (spec section 2 / Operation Manual): scales an
+ * operator's output level by the note's distance from the break point.
+ * Break point 0-99 maps to A-1..C8 (MIDI 21-120); the left curve/depth
+ * pair applies below it, right above. '-' curves subtract level units,
+ * '+' curves add; LIN reaches full depth 6 octaves out, EXP accelerates
+ * (provisional normalization pending references).
+ *
+ * @returns {number} effective output level 0-99
+ */
+export function scaledOutputLevel(voice, op, note) {
+  const b = opBase(op);
+  const ol = voice[b + OP.OL];
+  const bpMidi = voice[b + OP.BP] + 21;
+  const dist = note - bpMidi;
+  if (dist === 0) return ol;
+
+  const below = dist < 0;
+  const depth = voice[b + (below ? OP.LD : OP.RD)];
+  const curve = voice[b + (below ? OP.LC : OP.RC)];
+  if (depth === 0) return ol;
+
+  const span = Math.abs(dist);
+  const isExp = curve === 1 || curve === 2; // -EXP / +EXP
+  const norm = isExp
+    ? (2 ** (span / 16) - 1) / (2 ** (72 / 16) - 1)
+    : span / 72;
+  const amount = depth * Math.min(1.6, norm);
+  const sign = curve >= 2 ? +1 : -1; // 0,1 = -LIN,-EXP; 2,3 = +EXP,+LIN
+  return Math.min(99, Math.max(0, ol + sign * amount));
+}
+
+/**
+ * Keyboard rate scaling (spec section 2): EG rates rise with key
+ * position so high notes decay faster, RS 0-7 setting the slope
+ * (provisional: up to +7 rate units per octave above C1).
+ */
+export function scaledRates(voice, op, note) {
+  const b = opBase(op);
+  const rs = voice[b + OP.RS];
+  const boost = rs * ((note - 24) / 12);
+  const rates = [];
+  for (let i = 0; i < 4; i++) {
+    rates.push(Math.min(99, Math.max(0, voice[b + OP.EGR + i] + boost)));
+  }
+  return rates;
+}
+
 /** Operator frequency per spec 10.2; op is 1-6 human numbering. */
 export function opFrequency(voice, op, note) {
   const base = opBase(op);
@@ -407,7 +455,7 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
       const b = opBase(op);
       const state = v.ops[op - 1];
       state.eg.setParams(
-        this.voiceData.slice(b + OP.EGR, b + OP.EGR + 4),
+        scaledRates(this.voiceData, op, v.note), // keyboard rate scaling
         this.voiceData.slice(b + OP.EGL, b + OP.EGL + 4)
       );
       state.phaseInc = (TWO_PI * opFrequency(this.voiceData, op, v.note)) / sampleRate;
@@ -415,7 +463,7 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
       // (provisional linear blend; exact curve pending references).
       const kvs = this.voiceData[b + OP.KVS] / 7;
       const velFactor = 1 - kvs + kvs * v.velocity;
-      state.amp = dbToAmp(levelToDb(this.voiceData[b + OP.OL])) * velFactor;
+      state.amp = dbToAmp(levelToDb(scaledOutputLevel(this.voiceData, op, v.note))) * velFactor;
       state.ams = this.voiceData[b + OP.AMS];
     }
     v.pitchEg.setParams(
