@@ -8,21 +8,25 @@
  * This file must stay self-contained (no imports): it is loaded as a
  * worklet module via `new URL(..., import.meta.url)`, which Vite emits
  * as-is without rewriting import paths. Registration is guarded so node
- * (vitest) can import the DSP classes directly; Operator.js /
- * EnvelopeGenerator.js re-export from here to keep the spec's layout.
+ * (vitest) can import the DSP classes/tables directly; Operator.js,
+ * EnvelopeGenerator.js and Algorithm.js re-export from here to keep the
+ * spec's file layout.
  *
- * Milestone 5 scope: one operator (OP1) per voice — sine through the
- * 4-stage rate/level envelope, frequency from OP1 mode/coarse/fine/detune
- * and the common transpose, live parameter updates via the 'voice'
- * message. Algorithms/modulation (M6-7) and LFO/pitch EG (M8) follow.
+ * Milestones 6-7 scope: full 6-operator phase-modulation synthesis over
+ * all 32 algorithm topologies, per-operator envelopes, operator on/off,
+ * feedback (self and cross-op loops in algorithms 4/6), key velocity
+ * sensitivity. LFO and pitch EG land in milestone 8; keyboard level/rate
+ * scaling in milestone 10.
  *
- * PROVISIONAL DSP MATH (documented deviation, spec 10.3): the EG ROM and
- * output-level tables from the reverse-engineering references are blocked
- * by this environment's network policy (see /reference/README.md). Until
- * they can be transcribed, levels use the widely documented ~0.75 dB per
- * step mapping and rates use exponential slopes calibrated to published
- * timing ballparks. The class API already matches the table-driven form
- * so swapping in the real tables is a constants-only change.
+ * PROVISIONAL DSP MATH (documented deviation, spec 10.3/10.5): the EG ROM
+ * and level/index tables from the reverse-engineering references are
+ * blocked by this environment's network policy (/reference/README.md).
+ * Until transcribed: levels map at the widely documented ~0.75 dB/step;
+ * EG rates use exponential slopes calibrated to published ballparks;
+ * modulation index peaks at 2*pi*4.6 rad for level 99 (the spec's
+ * figure); feedback averages the source's last two samples (standard
+ * anti-oscillation) scaled to +/-pi at FB=7. All are constants-only
+ * swaps once the tables arrive.
  *
  * Message protocol (main thread -> processor):
  *   {type:'noteOn', note, velocity}   MIDI note, velocity 1-127
@@ -32,8 +36,14 @@
  */
 
 const NUM_VOICES = 16;
+const NUM_OPS = 6;
 const TWO_PI = 2 * Math.PI;
 const SILENCE_DB = -96;
+/** Peak phase deviation contributed by a level-99 modulator (spec 10.5). */
+const MOD_INDEX_MAX = TWO_PI * 4.6;
+/** Peak self/loop feedback deviation at FB=7 (provisional). */
+const FEEDBACK_MAX = Math.PI;
+const VOICE_AMP = 0.2;
 
 /* ---------------------------------------------------------------- *
  * Voice buffer indices (unpacked dump order, OP6 first — must match *
@@ -49,7 +59,51 @@ const OP = {
   AMS: 14, KVS: 15, OL: 16, MODE: 17, FC: 18, FF: 19, DET: 20
 };
 const IDX_ALGORITHM = 126 + 8;
+const IDX_FEEDBACK = 126 + 9;
 const IDX_TRANSPOSE = 126 + 18;
+
+/* ---------------------------------------------------------------- *
+ * The 32 algorithm topologies (spec 10.4), transcribed from the     *
+ * Operation Manual chart. Operator indices are 0-based (op1 = 0).   *
+ * `modulation[target] = [modulators]`; every modulator has a higher *
+ * number than its target except feedback, which is listed as        *
+ * `feedback` (the op whose input the loop enters) + `feedbackSource`*
+ * (whose output it taps — differs only in algorithms 4 and 6).      *
+ * ---------------------------------------------------------------- */
+export const algorithms = [
+  { id: 1, carriers: [0, 2], modulation: { 0: [1], 2: [3], 3: [4], 4: [5] }, feedback: 5 },
+  { id: 2, carriers: [0, 2], modulation: { 0: [1], 2: [3], 3: [4], 4: [5] }, feedback: 1 },
+  { id: 3, carriers: [0, 3], modulation: { 0: [1], 1: [2], 3: [4], 4: [5] }, feedback: 5 },
+  { id: 4, carriers: [0, 3], modulation: { 0: [1], 1: [2], 3: [4], 4: [5] }, feedback: 5, feedbackSource: 3 },
+  { id: 5, carriers: [0, 2, 4], modulation: { 0: [1], 2: [3], 4: [5] }, feedback: 5 },
+  { id: 6, carriers: [0, 2, 4], modulation: { 0: [1], 2: [3], 4: [5] }, feedback: 5, feedbackSource: 4 },
+  { id: 7, carriers: [0, 2], modulation: { 0: [1], 2: [3, 4], 4: [5] }, feedback: 5 },
+  { id: 8, carriers: [0, 2], modulation: { 0: [1], 2: [3, 4], 4: [5] }, feedback: 3 },
+  { id: 9, carriers: [0, 2], modulation: { 0: [1], 2: [3, 4], 4: [5] }, feedback: 1 },
+  { id: 10, carriers: [0, 3], modulation: { 0: [1], 1: [2], 3: [4, 5] }, feedback: 2 },
+  { id: 11, carriers: [0, 3], modulation: { 0: [1], 1: [2], 3: [4, 5] }, feedback: 5 },
+  { id: 12, carriers: [0, 2], modulation: { 0: [1], 2: [3, 4, 5] }, feedback: 1 },
+  { id: 13, carriers: [0, 2], modulation: { 0: [1], 2: [3, 4, 5] }, feedback: 5 },
+  { id: 14, carriers: [0, 2], modulation: { 0: [1], 2: [3], 3: [4, 5] }, feedback: 5 },
+  { id: 15, carriers: [0, 2], modulation: { 0: [1], 2: [3], 3: [4, 5] }, feedback: 1 },
+  { id: 16, carriers: [0], modulation: { 0: [1, 2, 4], 2: [3], 4: [5] }, feedback: 5 },
+  { id: 17, carriers: [0], modulation: { 0: [1, 2, 4], 2: [3], 4: [5] }, feedback: 1 },
+  { id: 18, carriers: [0], modulation: { 0: [1, 2, 3], 3: [4], 4: [5] }, feedback: 2 },
+  { id: 19, carriers: [0, 3, 4], modulation: { 0: [1], 1: [2], 3: [5], 4: [5] }, feedback: 5 },
+  { id: 20, carriers: [0, 1, 3], modulation: { 0: [2], 1: [2], 3: [4, 5] }, feedback: 2 },
+  { id: 21, carriers: [0, 1, 3, 4], modulation: { 0: [2], 1: [2], 3: [5], 4: [5] }, feedback: 2 },
+  { id: 22, carriers: [0, 2, 3, 4], modulation: { 0: [1], 2: [5], 3: [5], 4: [5] }, feedback: 5 },
+  { id: 23, carriers: [0, 1, 3, 4], modulation: { 1: [2], 3: [5], 4: [5] }, feedback: 5 },
+  { id: 24, carriers: [0, 1, 2, 3, 4], modulation: { 2: [5], 3: [5], 4: [5] }, feedback: 5 },
+  { id: 25, carriers: [0, 1, 2, 3, 4], modulation: { 3: [5], 4: [5] }, feedback: 5 },
+  { id: 26, carriers: [0, 1, 3], modulation: { 1: [2], 3: [4, 5] }, feedback: 5 },
+  { id: 27, carriers: [0, 1, 3], modulation: { 1: [2], 3: [4, 5] }, feedback: 2 },
+  { id: 28, carriers: [0, 2, 5], modulation: { 0: [1], 2: [3], 3: [4] }, feedback: 4 },
+  { id: 29, carriers: [0, 1, 2, 4], modulation: { 2: [3], 4: [5] }, feedback: 5 },
+  { id: 30, carriers: [0, 1, 2, 5], modulation: { 2: [3], 3: [4] }, feedback: 4 },
+  { id: 31, carriers: [0, 1, 2, 3, 4], modulation: { 4: [5] }, feedback: 5 },
+  { id: 32, carriers: [0, 1, 2, 3, 4, 5], modulation: {}, feedback: 5 }
+];
 
 /** EG/output level parameter (0-99) -> dB (0 dB at 99). ~0.75 dB/step. */
 export function levelToDb(l) {
@@ -132,12 +186,11 @@ export class EnvelopeGenerator {
   }
 }
 
-/** OP1 frequency per spec 10.2 from the voice buffer. */
-export function op1Frequency(voice, note) {
-  const base = opBase(1);
+/** Operator frequency per spec 10.2; op is 1-6 human numbering. */
+export function opFrequency(voice, op, note) {
+  const base = opBase(op);
   const transpose = (voice[IDX_TRANSPOSE] ?? 24) - 24;
-  const n = note + transpose;
-  const noteFreq = 440 * 2 ** ((n - 69) / 12);
+  const noteFreq = 440 * 2 ** ((note + transpose - 69) / 12);
 
   const mode = voice[base + OP.MODE];
   const coarse = voice[base + OP.FC];
@@ -153,20 +206,45 @@ export function op1Frequency(voice, note) {
   return noteFreq * ratio * 2 ** (detuneCents / 1200);
 }
 
-class Voice {
+class OperatorState {
   constructor(sampleRate) {
-    this.active = false;
-    this.note = -1;
     this.phase = 0;
     this.phaseInc = 0;
-    this.velocity = 1;
-    this.startTime = 0; // for oldest-first stealing
+    this.amp = 0; // OL * velocity factor, linear
+    this.out = 0; // last computed sample
+    this.prevOut = 0; // sample before that (feedback averaging)
     this.eg = new EnvelopeGenerator(sampleRate);
   }
 }
 
+class Voice {
+  constructor(sampleRate) {
+    this.active = false;
+    this.note = -1;
+    this.velocity = 1;
+    this.startTime = 0; // for oldest-first stealing
+    this.ops = Array.from({ length: NUM_OPS }, () => new OperatorState(sampleRate));
+  }
+
+  gateOn() {
+    for (const op of this.ops) op.eg.keyOn();
+  }
+
+  gateOff() {
+    for (const op of this.ops) op.eg.keyOff();
+  }
+
+  get gate() {
+    return this.ops[0].eg.gate;
+  }
+
+  isSilent() {
+    return this.ops.every((op) => op.eg.isSilent());
+  }
+}
+
 /** INIT VOICE fallback so the processor is playable before the first sync. */
-function defaultVoice() {
+export function defaultVoice() {
   const v = new Array(155).fill(0);
   for (let op = 1; op <= 6; op++) {
     const b = opBase(op);
@@ -183,21 +261,28 @@ function defaultVoice() {
 class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
   constructor() {
     super();
-    const sr = sampleRate; // worklet global
-    this.voices = Array.from({ length: NUM_VOICES }, () => new Voice(sr));
+    this.voices = Array.from({ length: NUM_VOICES }, () => new Voice(sampleRate));
     this.clock = 0;
     this.voiceData = defaultVoice();
     this.opOnOff = [true, true, true, true, true, true];
     this.port.onmessage = (e) => this.handleMessage(e.data);
   }
 
-  applyVoiceParams() {
-    const b = opBase(1);
-    const rates = this.voiceData.slice(b + OP.EGR, b + OP.EGR + 4);
-    const levels = this.voiceData.slice(b + OP.EGL, b + OP.EGL + 4);
-    for (const v of this.voices) {
-      v.eg.setParams(rates, levels);
-      if (v.active) v.phaseInc = (TWO_PI * op1Frequency(this.voiceData, v.note)) / sampleRate;
+  /** Refresh a voice's per-op EG params, frequencies, and amps. */
+  configureVoice(v) {
+    for (let op = 1; op <= NUM_OPS; op++) {
+      const b = opBase(op);
+      const state = v.ops[op - 1];
+      state.eg.setParams(
+        this.voiceData.slice(b + OP.EGR, b + OP.EGR + 4),
+        this.voiceData.slice(b + OP.EGL, b + OP.EGL + 4)
+      );
+      state.phaseInc = (TWO_PI * opFrequency(this.voiceData, op, v.note)) / sampleRate;
+      // Key velocity sensitivity 0-7 blends toward full velocity scaling
+      // (provisional linear blend; exact curve pending references).
+      const kvs = this.voiceData[b + OP.KVS] / 7;
+      const velFactor = 1 - kvs + kvs * v.velocity;
+      state.amp = dbToAmp(levelToDb(this.voiceData[b + OP.OL])) * velFactor;
     }
   }
 
@@ -207,25 +292,29 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
         const voice = this.allocate(msg.note);
         voice.active = true;
         voice.note = msg.note;
-        voice.phase = 0;
-        voice.phaseInc = (TWO_PI * op1Frequency(this.voiceData, msg.note)) / sampleRate;
         voice.velocity = (msg.velocity ?? 100) / 127;
         voice.startTime = this.clock;
-        voice.eg.keyOn();
+        for (const op of voice.ops) {
+          op.phase = 0;
+          op.out = 0;
+          op.prevOut = 0;
+        }
+        this.configureVoice(voice);
+        voice.gateOn();
         break;
       }
       case 'noteOff':
         for (const v of this.voices) {
-          if (v.active && v.eg.gate && v.note === msg.note) v.eg.keyOff();
+          if (v.active && v.gate && v.note === msg.note) v.gateOff();
         }
         break;
       case 'allOff':
-        for (const v of this.voices) v.eg.keyOff();
+        for (const v of this.voices) v.gateOff();
         break;
       case 'voice':
         this.voiceData = msg.data;
         if (msg.opOnOff) this.opOnOff = msg.opOnOff;
-        this.applyVoiceParams();
+        for (const v of this.voices) if (v.active) this.configureVoice(v);
         break;
     }
   }
@@ -243,18 +332,50 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
     const out = outputs[0][0];
     out.fill(0);
 
-    const olAmp = dbToAmp(levelToDb(this.voiceData[opBase(1) + OP.OL]));
-    const opOn = this.opOnOff[0] ? 1 : 0;
+    const alg = algorithms[this.voiceData[IDX_ALGORITHM] ?? 0] ?? algorithms[0];
+    const fbParam = this.voiceData[IDX_FEEDBACK] ?? 0;
+    const fbScale = fbParam === 0 ? 0 : FEEDBACK_MAX * 2 ** (fbParam - 7);
+    const fbTarget = alg.feedback;
+    const fbSource = alg.feedbackSource ?? alg.feedback;
 
     for (const v of this.voices) {
       if (!v.active) continue;
+
       for (let i = 0; i < out.length; i++) {
-        const env = v.eg.tick();
-        out[i] += Math.sin(v.phase) * env * olAmp * opOn * v.velocity * 0.25;
-        v.phase += v.phaseInc;
-        if (v.phase > TWO_PI) v.phase -= TWO_PI;
+        // Operators run high to low: every modulator except the feedback
+        // tap has a higher index than its target (spec 10.5).
+        let sample = 0;
+        for (let o = NUM_OPS - 1; o >= 0; o--) {
+          const st = v.ops[o];
+          const env = st.eg.tick();
+
+          let mod = 0;
+          const mods = alg.modulation[o];
+          if (mods) {
+            for (const m of mods) mod += v.ops[m].out;
+            mod *= MOD_INDEX_MAX;
+          }
+          if (o === fbTarget && fbScale !== 0) {
+            // Same deviation scale whether the loop is a self-loop or the
+            // cross-op loops of algorithms 4/6 — the FB parameter governs
+            // the path, not the tap point.
+            const src = v.ops[fbSource];
+            mod += ((src.out + src.prevOut) / 2) * fbScale;
+          }
+
+          st.prevOut = st.out;
+          st.out = this.opOnOff[o]
+            ? Math.sin(st.phase + mod) * env * st.amp
+            : 0;
+          st.phase += st.phaseInc;
+          if (st.phase > TWO_PI) st.phase -= TWO_PI;
+        }
+
+        for (const c of alg.carriers) sample += v.ops[c].out;
+        out[i] += sample * VOICE_AMP;
       }
-      if (v.eg.isSilent()) v.active = false;
+
+      if (v.isSilent()) v.active = false;
     }
 
     this.clock += out.length;

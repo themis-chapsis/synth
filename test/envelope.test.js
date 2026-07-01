@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { EnvelopeGenerator, levelToDb, dbToAmp, op1Frequency } from '../src/engine/dx7-processor.js';
+import { EnvelopeGenerator, levelToDb, dbToAmp, opFrequency } from '../src/engine/dx7-processor.js';
 
 const SR = 48000;
 
@@ -103,27 +103,27 @@ describe('OP1 frequency computation (spec 10.2)', () => {
 
   it('ratio mode: coarse 1 at middle C is ~261.6 Hz, coarse 0 halves', () => {
     const { v, b } = voice();
-    expect(op1Frequency(v, 60)).toBeCloseTo(261.63, 1);
+    expect(opFrequency(v, 1, 60)).toBeCloseTo(261.63, 1);
     v[b + 18] = 0;
-    expect(op1Frequency(v, 60)).toBeCloseTo(130.81, 1);
+    expect(opFrequency(v, 1, 60)).toBeCloseTo(130.81, 1);
   });
 
   it('fine raises the ratio, transpose shifts semitones', () => {
     const { v, b } = voice();
     v[b + 19] = 50; // fine +50%
-    expect(op1Frequency(v, 60)).toBeCloseTo(261.63 * 1.5, 0);
+    expect(opFrequency(v, 1, 60)).toBeCloseTo(261.63 * 1.5, 0);
     v[b + 19] = 0;
     v[126 + 18] = 36; // +1 octave
-    expect(op1Frequency(v, 60)).toBeCloseTo(523.25, 1);
+    expect(opFrequency(v, 1, 60)).toBeCloseTo(523.25, 1);
   });
 
   it('fixed mode ignores the note: decades from coarse, x10 from fine', () => {
     const { v, b } = voice();
     v[b + 17] = 1; // fixed
     v[b + 18] = 2; // 100 Hz decade
-    expect(op1Frequency(v, 60)).toBeCloseTo(100, 5);
-    expect(op1Frequency(v, 72)).toBeCloseTo(100, 5);
+    expect(opFrequency(v, 1, 60)).toBeCloseTo(100, 5);
+    expect(opFrequency(v, 1, 72)).toBeCloseTo(100, 5);
     v[b + 19] = 99;
-    expect(op1Frequency(v, 60)).toBeCloseTo(100 * 10 ** 0.99, 1);
+    expect(opFrequency(v, 1, 60)).toBeCloseTo(100 * 10 ** 0.99, 1);
   });
 });

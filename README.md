@@ -5,9 +5,8 @@ panel of a classic 1983 6-operator FM synthesizer, wired to a custom FM
 sound engine built on the Web Audio API (AudioWorklet). No frameworks, no
 prebuilt synth libraries.
 
-Status: **milestone 5** — full mode state machine with mode-accurate
+Status: **milestones 6-7** — full mode state machine with mode-accurate
 LCD/LED, the complete 155-parameter voice model with live editing, and
-first audio: an AudioWorklet engine plays OP1 as a sine through the
 4-stage rate/level envelope, with the QWERTY keybed (A-; from C3, shift
 for velocity), VOLUME gain, and <20 ms parameter-to-engine latency.
 Full 6-operator FM (algorithms, LFO, pitch EG) lands in milestones 6-8.

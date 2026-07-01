@@ -93,7 +93,42 @@ const result = await page.evaluate(async () => {
   }
   engine.noteOff(60);
 
-  return { sampleRate: ctx.sampleRate, loud, quiet, silent, paramLatencyMs };
+  // FM structure check (spec 10.4/10.5): in algorithm 1, OP2 modulates
+  // OP1 — raising its level must create harmonics; switching to
+  // algorithm 32 turns OP2 into a parallel carrier at the same ratio, so
+  // the harmonics must collapse again.
+  tap.fftSize = 8192;
+  tap.smoothingTimeConstant = 0; // spectrum snapshots, no per-call decay
+  const spec = new Float32Array(tap.frequencyBinCount);
+  const peakDb = (freq) => {
+    tap.getFloatFrequencyData(spec);
+    const bin = Math.round(freq / (ctx.sampleRate / tap.fftSize));
+    let max = -Infinity;
+    for (let b = bin - 2; b <= bin + 2; b++) max = Math.max(max, spec[b]);
+    return max;
+  };
+  const h2Rel = () => peakDb(523.25) - peakDb(261.63);
+
+  store.dispatch({ type: 'dataEntry', value: 1 }); // restore OP1 OL=99
+  engine.noteOn(60, 100);
+  await settle(500);
+  const pureH2 = h2Rel();
+
+  store.dispatch({ type: 'panelButtonPressed', id: 'operator-select' }); // OP2
+  store.dispatch({ type: 'dataEntry', value: 0.85 }); // OP2 OL ~84: modulate
+  await settle(500);
+  const fmH2 = h2Rel();
+
+  store.dispatch({ type: 'panelButtonPressed', id: 'btn-07' }); // algorithm
+  store.dispatch({ type: 'dataEntry', value: 1 }); // -> algorithm 32
+  await settle(500);
+  const algH2 = h2Rel();
+  engine.noteOff(60);
+
+  return {
+    sampleRate: ctx.sampleRate, loud, quiet, silent, paramLatencyMs,
+    fm: { pureH2, fmH2, algH2 }
+  };
 });
 
 await browser.close();
@@ -109,6 +144,10 @@ if (!(silent.rms < 1e-4)) problems.push(`voice not silent after noteOff (rms=${s
 if (!(result.paramLatencyMs >= 0 && result.paramLatencyMs < 100)) {
   problems.push(`parameter latency too high: ${result.paramLatencyMs} ms`);
 }
+const { pureH2, fmH2, algH2 } = result.fm;
+if (!(pureH2 < -25)) problems.push(`unmodulated voice not a pure sine (h2 at ${pureH2.toFixed(1)} dB)`);
+if (!(fmH2 > pureH2 + 15)) problems.push(`no sidebands from OP2 modulation (h2 ${fmH2.toFixed(1)} vs pure ${pureH2.toFixed(1)} dB)`);
+if (!(algH2 < fmH2 - 15)) problems.push(`algorithm 32 did not flatten the spectrum (h2 ${algH2.toFixed(1)} vs fm ${fmH2.toFixed(1)} dB)`);
 
 console.log(JSON.stringify(result, null, 2));
 if (problems.length) {
