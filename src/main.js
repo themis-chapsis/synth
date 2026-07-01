@@ -14,6 +14,7 @@ import { sliders, modeButtons, numberedButtons, display } from './panel/panelLay
 import { store } from './state/store.js';
 import { createEngine } from './engine/audio-worklet.js';
 import { installKeyboardMap } from './panel/keyboardMap.js';
+import { parseBulkDump } from './sysex/dx7-sysex.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XHTML_NS = 'http://www.w3.org/1999/xhtml';
@@ -115,8 +116,34 @@ function boot() {
   store.subscribe(sync);
   sync(store.getState());
 
+  // SysEx banks. Boot: if the factory bank file has been placed in
+  // public/ (rom1a.syx — not bundled; downloads are blocked in the build
+  // environment, see /reference), load it into the internal bank per
+  // spec 11. At runtime, dropping a .syx file on the page inserts it as
+  // the cartridge (spec 2: single loadable SysEx file as "cartridge").
+  const loadSysex = (buffer, bank) => {
+    const { voices } = parseBulkDump(new Uint8Array(buffer));
+    store.dispatch({ type: 'loadBank', bank, voices });
+  };
+  fetch('rom1a.syx')
+    .then((r) => (r.ok ? r.arrayBuffer() : null))
+    .then((buf) => buf && loadSysex(buf, 'internal'))
+    .catch(() => {});
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    try {
+      loadSysex(await file.arrayBuffer(), 'cartridge');
+    } catch (err) {
+      store.dispatch({ type: 'lcdNotice', rows: [' BAD SYSEX FILE', ''] });
+      console.error('[sysex]', err);
+    }
+  });
+
   // Debug/testing handle (used by the headless interaction checks).
-  window.__fm6 = { store, ensureEngine, get engine() { return engine; } };
+  window.__fm6 = { store, ensureEngine, loadSysex, get engine() { return engine; } };
 }
 
 boot();

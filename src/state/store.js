@@ -297,6 +297,21 @@ export function createStore() {
           setTargetValue(target, Math.round(min + action.value * (max - min)));
           break;
         }
+        case 'lcdNotice':
+          state.notice = action.rows;
+          break;
+        case 'loadBank': {
+          // A parsed 32-voice SysEx bank arriving as "cartridge insert"
+          // (or the boot-time factory bank into internal, spec 11).
+          state.banks[action.bank] = action.voices.map((v) => v.slice());
+          state.notice = [action.bank === 'internal' ? 'INTERNAL LOADED' : 'CARTRIDGE LOADED', ''];
+          // Reload the current patch if it came from the replaced bank so
+          // the display and engine can't reference stale data.
+          if (state.mode === PanelMode.PLAY && state.bank === action.bank) {
+            loadPatch(state.currentPatch);
+          }
+          break;
+        }
         default:
           console.warn('[store] unknown action', action);
           return;

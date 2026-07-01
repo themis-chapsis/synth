@@ -17,10 +17,12 @@ was refused by the proxy (HTTP 403 policy denial). Status per item:
 | 7 | ROM1A.syx / ROM1B.syx factory banks | **Blocked** | Required for milestone 9 |
 | 8 | Raph Levien MSFA writeups | **Blocked** | DSP notes, milestones 5-8 |
 
-**Action needed at milestone 1 review:** either relax the environment's
-network policy for the sources above, or drop the files into `/reference/`
-manually (plus the two `.syx` banks into `src/sysex/`), before milestones
-3+ begin.
+**Action needed:** either relax the environment's network policy for the
+sources above, or drop the files into `/reference/` manually. For the
+factory banks specifically: place `rom1a.syx` in `public/` and it loads
+into the internal bank at boot (milestone 9's loader is in place and
+verified against generated banks); any 32-voice `.syx` can also be
+dragged onto the page at runtime to insert it as the cartridge.
 
 ## Facts verified this session (via manual excerpts in search results)
 
