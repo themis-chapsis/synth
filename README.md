@@ -5,12 +5,13 @@ panel of a classic 1983 6-operator FM synthesizer, wired to a custom FM
 sound engine built on the Web Audio API (AudioWorklet). No frameworks, no
 prebuilt synth libraries.
 
-Status: **milestone 1** — the visual panel shell renders (sliders, all
-membrane buttons with three-color silkscreen, character-ROM-accurate 16x2
-LCD showing `READY`, 2-digit 7-segment LED). No sound yet; the state
-machine, parameter model, and FM engine land in later milestones. See
+Status: **milestone 2** — the panel mode state machine is live: PLAY /
+EDIT / COMPARE / FUNCTION / STORE transitions, per-mode button routing,
+memory select/protect with lit indicators, the store flow with LED blink
+and protect blocking, and mode-accurate LCD/LED content. No sound yet;
+the 155-parameter voice model arrives in milestone 3, audio in 4+. See
 `reference/README.md` for reference-material status and items pending
-verification.
+verification. Run the state machine tests with `npm test`.
 
 ## Running
 

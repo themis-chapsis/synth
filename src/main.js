@@ -42,24 +42,38 @@ function boot() {
 
   for (const def of sliders) {
     new Slider(slots.get(def.id), def, (v) => {
-      // VOLUME feeds the master gain node from milestone 4 on;
-      // DATA ENTRY feeds the selected parameter from milestone 3 on.
-      console.debug(`[slider] ${def.id} = ${v.toFixed(3)}`);
+      if (def.id === 'data-entry') {
+        store.dispatch({ type: 'dataEntry', value: v });
+      } else {
+        // VOLUME feeds the master gain node from milestone 4 on.
+        console.debug(`[slider] ${def.id} = ${v.toFixed(3)}`);
+      }
     });
   }
-  for (const def of modeButtons) new MembraneButton(slots.get(def.id), def);
-  for (const def of numberedButtons) new MembraneButton(slots.get(def.id), def);
+
+  /** @type {Map<string, MembraneButton>} */
+  const buttons = new Map();
+  for (const def of modeButtons) buttons.set(def.id, new MembraneButton(slots.get(def.id), def));
+  for (const def of numberedButtons) buttons.set(def.id, new MembraneButton(slots.get(def.id), def));
 
   const lcd = new LCD(htmlHost(slots.get('lcd'), display.lcd));
   const led = new SevenSegment(htmlHost(slots.get('led'), display.led), 2);
 
-  const syncDisplays = (state) => {
+  const sync = (state) => {
     lcd.setText(state.lcd[0], state.lcd[1]);
     led.setText(state.led);
     led.setBlinking(state.ledBlinking);
+    // Active-bank and protect indicators (spec 5.5/5.6).
+    buttons.get('mem-select-int').setLit(state.bank === 'internal');
+    buttons.get('mem-select-crt').setLit(state.bank === 'cartridge');
+    buttons.get('mem-protect-int').setLit(state.memoryProtect.internal);
+    buttons.get('mem-protect-crt').setLit(state.memoryProtect.cartridge);
   };
-  store.subscribe(syncDisplays);
-  syncDisplays(store.getState());
+  store.subscribe(sync);
+  sync(store.getState());
+
+  // Debug/testing handle (used by the headless interaction checks).
+  window.__fm6 = { store };
 }
 
 boot();

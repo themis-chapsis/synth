@@ -33,8 +33,8 @@ const COL = [252, 320, 388, 456, 524];
 
 export const modeButtons = [
   // PROVISIONAL: NO/YES placement (right of DATA ENTRY, side by side).
-  { id: 'no', x: 158, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)' },
-  { id: 'yes', x: 202, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)' },
+  { id: 'no', x: 158, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)', autoRepeat: true },
+  { id: 'yes', x: 202, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)', autoRepeat: true },
 
   { id: 'store', x: COL[0], y: ROW_TOP, ...MODE_BTN, color: 'orange', label: 'STORE' },
   { id: 'mem-protect-int', x: COL[1], y: ROW_TOP, ...MODE_BTN, color: 'cream', label: 'INTERNAL' },
