@@ -33,7 +33,7 @@ export const editMap = [
   { action: 'param', param: 'lfoSync' },
   { action: 'param', param: 'pitchModSens' },
   { action: 'opParam', param: 'ampModSens' },
-  { action: 'opParam', param: 'oscModeSync' },
+  { action: 'opParam', param: 'oscModeSync', cycles: 2 },
   { action: 'opParam', param: 'freqCoarse' },
   { action: 'opParam', param: 'freqFine' },
   { action: 'opParam', param: 'detune' },

@@ -7,15 +7,23 @@
  * refreshes the LCD text (via lcdFormatter) and the LED so displays can
  * never drift from state.
  *
- * Milestone 2 scope: modes, transitions, display routing, memory
- * select/protect, the store flow. Parameter VALUES (and NO/YES/DATA ENTRY
- * edits of them) arrive with the milestone 3 voice model; 'adjustParam'
- * and 'dataEntry' are accepted but only recorded for now.
+ * Milestone 3: the working voice is a live 155-value buffer; NO/YES and
+ * DATA ENTRY adjust the selected edit/function parameter, PLAY loads from
+ * the banks, STORE writes to them, COMPARE reads the pristine copy of the
+ * loaded patch. Engine updates (port.postMessage batching) start with
+ * milestone 4.
  */
 
 import { PanelMode } from './PanelMode.js';
 import { editMap, functionMap } from './buttonMap.js';
 import { formatLcd } from '../display/lcdFormatter.js';
+import {
+  voiceParamDefs, paramIndex, initVoice, editTargetId
+} from './voiceParams.js';
+import { functionParamDefs, initFunctionValues, functionTargetKey } from './functionParams.js';
+import { createBanks } from './patchBank.js';
+
+const clamp = (v, [min, max]) => Math.min(max, Math.max(min, v));
 
 export function createStore() {
   const state = {
@@ -28,6 +36,14 @@ export function createStore() {
     currentPatch: 1, // 1-32
     memoryProtect: { internal: true, cartridge: true }, // both ON at power-up
     storeTarget: null, // destination slot while in STORE mode
+
+    banks: createBanks(),
+    /** working voice, 155 values in dump order */
+    voice: initVoice(),
+    /** pristine copy of the loaded patch, shown in COMPARE */
+    compareVoice: initVoice(),
+    /** global function parameter values */
+    funcValues: initFunctionValues(),
 
     selectedOp: 1, // 1-6, cycled by OPERATOR SELECT
     opOnOff: [true, true, true, true, true, true],
@@ -85,16 +101,44 @@ export function createStore() {
     state.mode = mode;
   }
 
+  function loadPatch(n) {
+    state.currentPatch = n;
+    const stored = state.banks[state.bank][n - 1];
+    state.voice = stored ? stored.slice() : initVoice();
+    state.compareVoice = state.voice.slice();
+  }
+
+  /** The parameter currently addressed by NO/YES/DATA ENTRY, if any. */
+  function selectedTarget() {
+    if (state.mode === PanelMode.EDIT) {
+      const id = editTargetId(editMap[state.editParam - 1], state.editSub, state.selectedOp);
+      if (id == null) return null;
+      const idx = paramIndex.get(id);
+      return { kind: 'voice', idx, def: voiceParamDefs[idx] };
+    }
+    if (state.mode === PanelMode.FUNCTION) {
+      const key = functionTargetKey(functionMap[state.functionParam - 1], state.functionSub);
+      if (key == null) return null;
+      return { kind: 'func', key, def: functionParamDefs[key] };
+    }
+    return null; // PLAY and COMPARE take no value input
+  }
+
+  function setTargetValue(target, value) {
+    const v = clamp(value, target.def.range);
+    if (target.kind === 'voice') state.voice[target.idx] = v;
+    else state.funcValues[target.key] = v;
+  }
+
   function handleNumbered(n) {
     state.notice = null;
     switch (state.mode) {
       case PanelMode.PLAY:
-        state.currentPatch = n;
+        loadPatch(n);
         break;
 
       case PanelMode.COMPARE:
-        // Compare is read-only; button presses fall through to edit
-        // selection on the real unit only after returning to EDIT. Ignore.
+        // Compare is read-only; selection changes wait for EDIT.
         break;
 
       case PanelMode.EDIT: {
@@ -144,8 +188,9 @@ export function createStore() {
         state.notice = ['MEMORY PROTECTED', ''];
         return; // stay in STORE; NO backs out
       }
-      // Actual voice write lands with the patch banks (milestone 9).
+      state.banks[state.bank][state.storeTarget - 1] = state.voice.slice();
       state.currentPatch = state.storeTarget;
+      state.compareVoice = state.voice.slice();
     }
     state.storeTarget = null;
     enterMode(state.storeReturnMode);
@@ -184,17 +229,24 @@ export function createStore() {
     state.notice = ['MEMORY PROTECT', `${name.padEnd(13)}${flag}`];
   }
 
+  function adjustParam(delta) {
+    const target = selectedTarget();
+    if (!target) return;
+    const current = target.kind === 'voice' ? state.voice[target.idx] : state.funcValues[target.key];
+    setTargetValue(target, current + delta);
+  }
+
   const buttonHandlers = {
     store: handleStore,
     'edit-compare': handleEditCompare,
     function: handleFunction,
     no: () => {
       if (state.mode === PanelMode.STORE) resolveStore(false);
-      else store.dispatch({ type: 'adjustParam', delta: -1 });
+      else adjustParam(-1);
     },
     yes: () => {
       if (state.mode === PanelMode.STORE) resolveStore(true);
-      else store.dispatch({ type: 'adjustParam', delta: +1 });
+      else adjustParam(+1);
     },
     'mem-select-int': () => { state.notice = null; state.bank = 'internal'; },
     'mem-select-crt': () => { state.notice = null; state.bank = 'cartridge'; },
@@ -229,16 +281,22 @@ export function createStore() {
           // Auto-repeat only steps parameters (spec 5.4); it must never
           // re-confirm a store prompt.
           if (state.mode === PanelMode.STORE) return;
-          if (action.id === 'no') store.dispatch({ type: 'adjustParam', delta: -1 });
-          if (action.id === 'yes') store.dispatch({ type: 'adjustParam', delta: +1 });
-          return;
+          if (action.id === 'no') adjustParam(-1);
+          else if (action.id === 'yes') adjustParam(+1);
+          else return;
+          break;
         case 'adjustParam':
-          // Applied to the selected parameter from milestone 3 on.
+          adjustParam(action.delta);
           break;
-        case 'dataEntry':
-          // Normalized 0-1 slider position; mapped onto the selected
-          // parameter's range from milestone 3 on (spec 5.3).
+        case 'dataEntry': {
+          // Absolute-position slider (spec 5.3): normalized 0-1 maps onto
+          // the selected parameter's full range.
+          const target = selectedTarget();
+          if (!target) return;
+          const [min, max] = target.def.range;
+          setTargetValue(target, Math.round(min + action.value * (max - min)));
           break;
+        }
         default:
           console.warn('[store] unknown action', action);
           return;

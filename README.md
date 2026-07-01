@@ -5,7 +5,6 @@ panel of a classic 1983 6-operator FM synthesizer, wired to a custom FM
 sound engine built on the Web Audio API (AudioWorklet). No frameworks, no
 prebuilt synth libraries.
 
-Status: **milestone 2** — the panel mode state machine is live: PLAY /
 EDIT / COMPARE / FUNCTION / STORE transitions, per-mode button routing,
 memory select/protect with lit indicators, the store flow with LED blink
 and protect blocking, and mode-accurate LCD/LED content. No sound yet;
