@@ -5,11 +5,12 @@ panel of a classic 1983 6-operator FM synthesizer, wired to a custom FM
 sound engine built on the Web Audio API (AudioWorklet). No frameworks, no
 prebuilt synth libraries.
 
-Status: **milestones 6-7** — full mode state machine with mode-accurate
-LCD/LED, the complete 155-parameter voice model with live editing, and
-4-stage rate/level envelope, with the QWERTY keybed (A-; from C3, shift
-for velocity), VOLUME gain, and <20 ms parameter-to-engine latency.
-Full 6-operator FM (algorithms, LFO, pitch EG) lands in milestones 6-8.
+Status: **milestone 7** — the panel (full mode state machine,
+mode-accurate LCD/LED, complete 155-parameter voice model with live
+editing) drives a working 6-operator phase-modulation engine with all 32
+algorithms, per-operator envelopes, feedback, and the QWERTY keybed
+(A-; from C3, shift for velocity). Parameter-to-engine latency ~21 ms.
+LFO and pitch EG land in milestone 8, factory patches via SysEx in 9.
 See `reference/README.md` for reference-material status and items
 pending verification. `npm test` runs the unit suite;
 `node scripts/audiocheck.mjs` runs the headless audio checks.

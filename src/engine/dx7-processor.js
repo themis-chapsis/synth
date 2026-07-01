@@ -58,8 +58,18 @@ const OP = {
   BP: 8, LD: 9, RD: 10, LC: 11, RC: 12, RS: 13,
   AMS: 14, KVS: 15, OL: 16, MODE: 17, FC: 18, FF: 19, DET: 20
 };
+const IDX_PEG_R = 126; // +0..3, then levels +4..7
+const IDX_PEG_L = 126 + 4;
 const IDX_ALGORITHM = 126 + 8;
 const IDX_FEEDBACK = 126 + 9;
+const IDX_OSC_SYNC = 126 + 10;
+const IDX_LFO_SPEED = 126 + 11;
+const IDX_LFO_DELAY = 126 + 12;
+const IDX_LFO_PMD = 126 + 13;
+const IDX_LFO_AMD = 126 + 14;
+const IDX_LFO_SYNC = 126 + 15;
+const IDX_LFO_WAVE = 126 + 16;
+const IDX_PMS = 126 + 17;
 const IDX_TRANSPOSE = 126 + 18;
 
 /* ---------------------------------------------------------------- *
@@ -186,6 +196,114 @@ export class EnvelopeGenerator {
   }
 }
 
+/**
+ * LFO (spec 10.6): 6 waveforms, one instance shared by all voices like
+ * the original. Speed 0-99 maps nonlinearly to Hz and delay to a fade-in
+ * time (provisional curves pending the blocked EG ROM tables; see
+ * header). Pitch output is bipolar -1..1; amp output is unipolar 0..1
+ * (attenuation depth).
+ */
+export class LFO {
+  constructor(sampleRate) {
+    this.sampleRate = sampleRate;
+    this.phase = 0; // 0..1
+    this.hz = 0.06;
+    this.wave = 0;
+    this.shValue = 0;
+  }
+
+  /** Speed parameter 0-99 -> Hz (provisional curve, ~0.06 to ~40 Hz). */
+  static speedToHz(s) {
+    return 0.062 + (s / 12.7) ** 1.75;
+  }
+
+  /** Delay parameter 0-99 -> seconds before the fade-in completes. */
+  static delayToSeconds(d) {
+    return d === 0 ? 0 : (d / 99) ** 2 * 5;
+  }
+
+  setParams(speed, wave) {
+    this.hz = LFO.speedToHz(speed);
+    this.wave = wave;
+  }
+
+  reset() {
+    this.phase = 0;
+  }
+
+  /** Advance by n samples; returns bipolar value for the block. */
+  tickBlock(n) {
+    const prev = this.phase;
+    this.phase += (this.hz * n) / this.sampleRate;
+    if (this.phase >= 1) {
+      this.phase -= Math.floor(this.phase);
+      // New random level each cycle for sample-and-hold.
+      this.shValue = Math.random() * 2 - 1;
+    }
+    const p = prev;
+    switch (this.wave) {
+      case 0: return p < 0.5 ? 4 * p - 1 : 3 - 4 * p; // triangle
+      case 1: return 1 - 2 * p; // saw down
+      case 2: return 2 * p - 1; // saw up
+      case 3: return p < 0.5 ? 1 : -1; // square
+      case 4: return Math.sin(TWO_PI * p); // sine
+      case 5: return this.shValue; // sample & hold
+      default: return 0;
+    }
+  }
+}
+
+/**
+ * Pitch envelope (spec 10.8): global 4-stage rate/level EG applied to all
+ * operators' base frequency. Levels are centered at 50 = no change and
+ * span +/-4 octaves; movement is linear in semitones at a provisional
+ * rate curve.
+ */
+export class PitchEG {
+  constructor(sampleRate) {
+    this.sampleRate = sampleRate;
+    this.rates = [99, 99, 99, 99];
+    this.levels = [50, 50, 50, 50];
+    this.semis = 0;
+    this.stage = 3;
+    this.gate = false;
+  }
+
+  static levelToSemis(l) {
+    return ((l - 50) / 50) * 48;
+  }
+
+  setParams(rates, levels) {
+    this.rates = rates;
+    this.levels = levels;
+  }
+
+  keyOn() {
+    this.gate = true;
+    this.stage = 0;
+    this.semis = PitchEG.levelToSemis(this.levels[3]);
+  }
+
+  keyOff() {
+    this.gate = false;
+    this.stage = 3;
+  }
+
+  /** Advance by n samples; returns current offset in semitones. */
+  tickBlock(n) {
+    const target = PitchEG.levelToSemis(this.levels[this.stage]);
+    // Provisional: semitones/second doubling every ~7 rate steps.
+    const slope = (0.4 * 2 ** (this.rates[this.stage] / 7) * n) / this.sampleRate;
+    if (this.semis < target) {
+      this.semis = Math.min(target, this.semis + slope);
+    } else if (this.semis > target) {
+      this.semis = Math.max(target, this.semis - slope);
+    }
+    if (this.semis === target && this.gate && this.stage < 2) this.stage++;
+    return this.semis;
+  }
+}
+
 /** Operator frequency per spec 10.2; op is 1-6 human numbering. */
 export function opFrequency(voice, op, note) {
   const base = opBase(op);
@@ -209,8 +327,9 @@ export function opFrequency(voice, op, note) {
 class OperatorState {
   constructor(sampleRate) {
     this.phase = 0;
-    this.phaseInc = 0;
+    this.phaseInc = 0; // base increment before pitch modulation
     this.amp = 0; // OL * velocity factor, linear
+    this.ams = 0; // amp mod sensitivity 0-3
     this.out = 0; // last computed sample
     this.prevOut = 0; // sample before that (feedback averaging)
     this.eg = new EnvelopeGenerator(sampleRate);
@@ -223,15 +342,20 @@ class Voice {
     this.note = -1;
     this.velocity = 1;
     this.startTime = 0; // for oldest-first stealing
+    this.age = 0; // seconds since key-on (LFO delay ramp)
     this.ops = Array.from({ length: NUM_OPS }, () => new OperatorState(sampleRate));
+    this.pitchEg = new PitchEG(sampleRate);
   }
 
   gateOn() {
     for (const op of this.ops) op.eg.keyOn();
+    this.pitchEg.keyOn();
+    this.age = 0;
   }
 
   gateOff() {
     for (const op of this.ops) op.eg.keyOff();
+    this.pitchEg.keyOff();
   }
 
   get gate() {
@@ -254,6 +378,14 @@ export function defaultVoice() {
     v[b + OP.DET] = 7;
   }
   v[opBase(1) + OP.OL] = 99;
+  for (let i = 0; i < 4; i++) {
+    v[IDX_PEG_R + i] = 99;
+    v[IDX_PEG_L + i] = 50;
+  }
+  v[IDX_OSC_SYNC] = 1;
+  v[IDX_LFO_SPEED] = 35;
+  v[IDX_LFO_SYNC] = 1;
+  v[IDX_PMS] = 3;
   v[IDX_TRANSPOSE] = 24;
   return v;
 }
@@ -265,6 +397,7 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
     this.clock = 0;
     this.voiceData = defaultVoice();
     this.opOnOff = [true, true, true, true, true, true];
+    this.lfo = new LFO(sampleRate);
     this.port.onmessage = (e) => this.handleMessage(e.data);
   }
 
@@ -283,7 +416,13 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
       const kvs = this.voiceData[b + OP.KVS] / 7;
       const velFactor = 1 - kvs + kvs * v.velocity;
       state.amp = dbToAmp(levelToDb(this.voiceData[b + OP.OL])) * velFactor;
+      state.ams = this.voiceData[b + OP.AMS];
     }
+    v.pitchEg.setParams(
+      this.voiceData.slice(IDX_PEG_R, IDX_PEG_R + 4),
+      this.voiceData.slice(IDX_PEG_L, IDX_PEG_L + 4)
+    );
+    this.lfo.setParams(this.voiceData[IDX_LFO_SPEED], this.voiceData[IDX_LFO_WAVE]);
   }
 
   handleMessage(msg) {
@@ -295,11 +434,13 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
         voice.velocity = (msg.velocity ?? 100) / 127;
         voice.startTime = this.clock;
         for (const op of voice.ops) {
-          op.phase = 0;
+          // Oscillator key sync: phases reset on key-on unless disabled.
+          if (this.voiceData[IDX_OSC_SYNC]) op.phase = 0;
           op.out = 0;
           op.prevOut = 0;
         }
         this.configureVoice(voice);
+        if (this.voiceData[IDX_LFO_SYNC]) this.lfo.reset();
         voice.gateOn();
         break;
       }
@@ -330,6 +471,7 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
 
   process(_inputs, outputs) {
     const out = outputs[0][0];
+    const n = out.length;
     out.fill(0);
 
     const alg = algorithms[this.voiceData[IDX_ALGORITHM] ?? 0] ?? algorithms[0];
@@ -338,10 +480,34 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
     const fbTarget = alg.feedback;
     const fbSource = alg.feedbackSource ?? alg.feedback;
 
+    // LFO runs once per block for all voices (single shared LFO, like
+    // the original). Pitch/amp modulation is applied at block rate
+    // (2.7 ms at 48 kHz) — inaudible as stepping, standard practice.
+    const lfoVal = this.lfo.tickBlock(n);
+    const pmd = this.voiceData[IDX_LFO_PMD] / 99;
+    const amd = this.voiceData[IDX_LFO_AMD] / 99;
+    // Pitch mod sensitivity 0-7 -> peak semitones (provisional curve,
+    // exponential per step up to ~1 octave at 7).
+    const pms = this.voiceData[IDX_PMS];
+    const pmsSemis = pms === 0 ? 0 : (2 ** pms / 128) * 12;
+    const delaySec = LFO.delayToSeconds(this.voiceData[IDX_LFO_DELAY]);
+    const fadeSec = Math.max(0.05, delaySec * 0.5);
+
     for (const v of this.voices) {
       if (!v.active) continue;
 
-      for (let i = 0; i < out.length; i++) {
+      // LFO delay: silent until delaySec, then fades in (spec 10.6).
+      const ramp = delaySec === 0 ? 1 : Math.min(1, Math.max(0, (v.age - delaySec) / fadeSec));
+      v.age += n / sampleRate;
+
+      const pitchSemis = v.pitchEg.tickBlock(n) + lfoVal * pmd * pmsSemis * ramp;
+      const pitchFactor = 2 ** (pitchSemis / 12);
+      // Amp modulation: unipolar attenuation, depth per op from AMS 0-3
+      // (provisional: up to -24 dB at full sensitivity and depth).
+      const lfoUni = (1 - lfoVal) / 2;
+      const amAtten = lfoUni * amd * ramp * 24;
+
+      for (let i = 0; i < n; i++) {
         // Operators run high to low: every modulator except the feedback
         // tap has a higher index than its target (spec 10.5).
         let sample = 0;
@@ -364,10 +530,11 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
           }
 
           st.prevOut = st.out;
+          const am = st.ams === 0 ? 1 : dbToAmp(-amAtten * (st.ams / 3));
           st.out = this.opOnOff[o]
-            ? Math.sin(st.phase + mod) * env * st.amp
+            ? Math.sin(st.phase + mod) * env * st.amp * am
             : 0;
-          st.phase += st.phaseInc;
+          st.phase += st.phaseInc * pitchFactor;
           if (st.phase > TWO_PI) st.phase -= TWO_PI;
         }
 
@@ -378,7 +545,7 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
       if (v.isSilent()) v.active = false;
     }
 
-    this.clock += out.length;
+    this.clock += n;
     return true;
   }
 }

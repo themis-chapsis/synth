@@ -125,9 +125,45 @@ const result = await page.evaluate(async () => {
   const algH2 = h2Rel();
   engine.noteOff(60);
 
+  // Vibrato check (spec 10.6): with LFO PM DEPTH at 99 (speed 35 ~ 6 Hz,
+  // PMS 3) the fundamental must wobble; without it, it must hold still.
+  // Frequency is estimated per 46 ms window from interpolated upward
+  // zero crossings (sub-Hz resolution).
+  tap.fftSize = 2048;
+  const tbuf = new Float32Array(2048);
+  const estFreq = () => {
+    tap.getFloatTimeDomainData(tbuf);
+    const t = [];
+    for (let i = 1; i < tbuf.length; i++) {
+      if (tbuf[i - 1] < 0 && tbuf[i] >= 0) {
+        t.push(i - 1 + tbuf[i - 1] / (tbuf[i - 1] - tbuf[i]));
+      }
+    }
+    if (t.length < 3) return 0;
+    return ((t.length - 1) * ctx.sampleRate) / (t[t.length - 1] - t[0]);
+  };
+  const freqSpread = async () => {
+    const f = [];
+    for (let i = 0; i < 12; i++) {
+      await settle(60);
+      f.push(estFreq());
+    }
+    return Math.max(...f) - Math.min(...f);
+  };
+
+  engine.noteOn(60, 100);
+  await settle(300);
+  const steadySpread = await freqSpread();
+  store.dispatch({ type: 'panelButtonPressed', id: 'btn-12' }); // LFO PM DEPTH
+  store.dispatch({ type: 'dataEntry', value: 1 }); // -> 99
+  await settle(300);
+  const vibratoSpread = await freqSpread();
+  engine.noteOff(60);
+
   return {
     sampleRate: ctx.sampleRate, loud, quiet, silent, paramLatencyMs,
-    fm: { pureH2, fmH2, algH2 }
+    fm: { pureH2, fmH2, algH2 },
+    vibrato: { steadySpread, vibratoSpread }
   };
 });
 
@@ -148,6 +184,9 @@ const { pureH2, fmH2, algH2 } = result.fm;
 if (!(pureH2 < -25)) problems.push(`unmodulated voice not a pure sine (h2 at ${pureH2.toFixed(1)} dB)`);
 if (!(fmH2 > pureH2 + 15)) problems.push(`no sidebands from OP2 modulation (h2 ${fmH2.toFixed(1)} vs pure ${pureH2.toFixed(1)} dB)`);
 if (!(algH2 < fmH2 - 15)) problems.push(`algorithm 32 did not flatten the spectrum (h2 ${algH2.toFixed(1)} vs fm ${fmH2.toFixed(1)} dB)`);
+const { steadySpread, vibratoSpread } = result.vibrato;
+if (!(steadySpread < 3)) problems.push(`pitch unstable without LFO (spread ${steadySpread.toFixed(2)} Hz)`);
+if (!(vibratoSpread > 8)) problems.push(`no vibrato with PMD 99 (spread ${vibratoSpread.toFixed(2)} Hz)`);
 
 console.log(JSON.stringify(result, null, 2));
 if (problems.length) {
