@@ -5,15 +5,33 @@ panel of a classic 1983 6-operator FM synthesizer, wired to a custom FM
 sound engine built on the Web Audio API (AudioWorklet). No frameworks, no
 prebuilt synth libraries.
 
-Status: **milestone 7** — the panel (full mode state machine,
-mode-accurate LCD/LED, complete 155-parameter voice model with live
-editing) drives a working 6-operator phase-modulation engine with all 32
-algorithms, per-operator envelopes, feedback, and the QWERTY keybed
-(A-; from C3, shift for velocity). Parameter-to-engine latency ~21 ms.
-LFO and pitch EG land in milestone 8, factory patches via SysEx in 9.
-See `reference/README.md` for reference-material status and items
-pending verification. `npm test` runs the unit suite;
-`node scripts/audiocheck.mjs` runs the headless audio checks.
+Status: **all 12 build milestones implemented.** The panel (full mode
+state machine, mode-accurate LCD/LED, complete 155-parameter voice model
+with live editing, store/compare flows, function parameters, voice-name
+editing) drives a 6-operator phase-modulation engine with all 32
+algorithms, per-operator envelopes with keyboard level/rate scaling,
+feedback, LFO (6 waveforms with delay/fade), and pitch EG.
+Parameter-to-engine latency measures ~21 ms. 32-voice SysEx banks load
+at boot (`public/rom1a.syx`) or by dropping a `.syx` file on the page
+("cartridge"). MIDI in/out is stubbed, not implemented, per the spec's
+scope.
+
+Open fidelity items (all documented in `reference/README.md`): several
+DSP curves (EG timing, LFO speed, mod index, scaling slopes) are
+provisional constants pending the network-blocked reference tables, the
+factory ROM banks must be supplied as files, and a handful of silkscreen
+details await a reference photograph. `npm test` runs the 106-test unit
+suite; `node scripts/audiocheck.mjs` (against `npm run preview`) runs
+the headless audio verification.
+
+## Controls
+
+Press `?` in the app for the full keyboard reference: A-; play C3-E4
+(W E T Y U O P for sharps, Shift for velocity 127), digits press the
+numbered buttons (Shift +10, Alt +20, Alt+Shift+1/2 = 31/32),
+Enter/Backspace and the up/down arrows are YES/NO, left/right arrows
+step parameters, `-`/`=` nudge data entry, Alt+E toggles EDIT/COMPARE,
+Alt+F FUNCTION, Space repeats the last button, Escape returns to PLAY.
 
 ## Running
 

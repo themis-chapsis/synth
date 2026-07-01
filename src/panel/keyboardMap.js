@@ -1,14 +1,16 @@
 /**
  * QWERTY keyboard mapping (spec section 12).
  *
- * Milestone 5 scope: the 2-octave virtual keybed (spec 12.1) plus the
- * '-'/'=' data-entry nudge (spec 5.3). Panel-button shortcuts and the `?`
- * overlay follow in milestone 12 — note the spec assigns 'E'/'F' both to
- * keybed notes (12.1) and to panel shortcuts (12.2); that conflict is
- * flagged for the milestone review before 12.2 is wired.
+ * 12.1 keybed: 2 octaves from C3 (Yamaha convention, C3 = middle C =
+ * MIDI 60) on A..; with W E T Y U O P for sharps; Shift = velocity 127,
+ * unshifted 64.
  *
- * Keybed starts at C3 (Yamaha convention: C3 = middle C = MIDI 60).
- * Shift plays velocity 127, unshifted 64.
+ * 12.2 panel shortcuts. Two documented deviations from the spec text:
+ * - The spec assigns bare E/F both to keybed notes (12.1) and to panel
+ *   toggles (12.2); the keybed wins, and the toggles live on Alt+E /
+ *   Alt+F, consistent with the Alt shortcut family.
+ * - The spec's numbered-button table skips button 20; Shift+0 fills the
+ *   gap (1-9/0 = 1-10, Shift = +10, Alt = +20, Alt+Shift+1/2 = 31/32).
  */
 
 const C3 = 60;
@@ -34,11 +36,48 @@ const KEY_TO_OFFSET = new Map(Object.entries({
   Semicolon: 16 // E4
 }));
 
+/** All bindings, for the `?` overlay. */
+export const bindingHelp = [
+  ['A S D F G H J K L ;', 'white keys C3-E4'],
+  ['W E T Y U O P', 'black keys'],
+  ['Shift + note', 'velocity 127 (else 64)'],
+  ['1-9, 0', 'buttons 1-10'],
+  ['Shift + 1-9, 0', 'buttons 11-20'],
+  ['Alt + 1-9, 0', 'buttons 21-30'],
+  ['Alt+Shift + 1, 2', 'buttons 31, 32'],
+  ['Enter / Backspace', 'YES / NO'],
+  ['Arrow up / down', 'YES / NO'],
+  ['Arrow left / right', 'previous / next parameter'],
+  ['- / =', 'data entry -1 / +1'],
+  ['Alt+E', 'EDIT/COMPARE'],
+  ['Alt+F', 'FUNCTION'],
+  ['Space', 'repeat last button'],
+  ['Escape', 'back to PLAY'],
+  ['?', 'toggle this overlay']
+];
+
+/** Digit code -> button number under (shift, alt) modifiers. */
+function digitToButton(code, shiftKey, altKey) {
+  const m = /^Digit(\d)$/.exec(code);
+  if (!m) return null;
+  const d = Number(m[1]);
+  if (altKey && shiftKey) return d === 1 ? 31 : d === 2 ? 32 : null;
+  const base = d === 0 ? 10 : d;
+  if (altKey) return base + 20;
+  if (shiftKey) return base + 10;
+  return base;
+}
+
 /**
  * @param {{
  *   noteOn: (note: number, velocity: number) => void,
  *   noteOff: (note: number) => void,
- *   adjust: (delta: number) => void
+ *   adjust: (delta: number) => void,
+ *   pressButton: (id: string) => void,
+ *   navigate: (delta: number) => void,
+ *   escape: () => void,
+ *   repeatLast: () => void,
+ *   toggleHelp: () => void
  * }} handlers
  * @returns {() => void} uninstall
  */
@@ -47,7 +86,23 @@ export function installKeyboardMap(handlers) {
   const held = new Map();
 
   const onKeyDown = (e) => {
-    if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.repeat || e.metaKey || e.ctrlKey) return;
+
+    if (e.altKey) {
+      const btn = digitToButton(e.code, e.shiftKey, true);
+      if (btn) {
+        e.preventDefault();
+        handlers.pressButton(`btn-${String(btn).padStart(2, '0')}`);
+      } else if (e.code === 'KeyE') {
+        e.preventDefault();
+        handlers.pressButton('edit-compare');
+      } else if (e.code === 'KeyF') {
+        e.preventDefault();
+        handlers.pressButton('function');
+      }
+      return;
+    }
+
     const offset = KEY_TO_OFFSET.get(e.code);
     if (offset !== undefined) {
       e.preventDefault();
@@ -57,12 +112,31 @@ export function installKeyboardMap(handlers) {
       handlers.noteOn(note, e.shiftKey ? 127 : 64);
       return;
     }
-    if (e.code === 'Minus') {
+
+    const btn = digitToButton(e.code, e.shiftKey, false);
+    if (btn) {
       e.preventDefault();
-      handlers.adjust(-1);
-    } else if (e.code === 'Equal') {
-      e.preventDefault();
-      handlers.adjust(+1);
+      handlers.pressButton(`btn-${String(btn).padStart(2, '0')}`);
+      return;
+    }
+
+    switch (e.code) {
+      case 'Minus': e.preventDefault(); handlers.adjust(-1); break;
+      case 'Equal': e.preventDefault(); handlers.adjust(+1); break;
+      case 'Enter': e.preventDefault(); handlers.pressButton('yes'); break;
+      case 'Backspace': e.preventDefault(); handlers.pressButton('no'); break;
+      case 'ArrowUp': e.preventDefault(); handlers.pressButton('yes'); break;
+      case 'ArrowDown': e.preventDefault(); handlers.pressButton('no'); break;
+      case 'ArrowLeft': e.preventDefault(); handlers.navigate(-1); break;
+      case 'ArrowRight': e.preventDefault(); handlers.navigate(+1); break;
+      case 'Space': e.preventDefault(); handlers.repeatLast(); break;
+      case 'Escape': e.preventDefault(); handlers.escape(); break;
+      case 'Slash':
+        if (e.shiftKey) {
+          e.preventDefault();
+          handlers.toggleHelp();
+        }
+        break;
     }
   };
 

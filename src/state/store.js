@@ -57,6 +57,8 @@ export function createStore() {
 
     /** transient full-screen LCD notice (e.g. MEMORY PROTECTED) */
     notice: null,
+    /** last physical panel button, for the Space repeat shortcut */
+    lastButton: null,
 
     lcd: ['', ''],
     led: ' 1',
@@ -249,6 +251,39 @@ export function createStore() {
   }
 
   /**
+   * Arrow navigation (spec 12.2): previous/next parameter within the
+   * current mode, wrapping; skips the op on/off buttons in EDIT and the
+   * unassigned 12/13 in FUNCTION.
+   */
+  function navigateParam(delta) {
+    const wrap = (v, lo, hi) => (v < lo ? hi : v > hi ? lo : v);
+    state.notice = null;
+    switch (state.mode) {
+      case PanelMode.PLAY:
+        loadPatch(wrap(state.currentPatch + delta, 1, 32));
+        break;
+      case PanelMode.EDIT:
+      case PanelMode.COMPARE:
+        state.editParam = wrap(state.editParam + delta, 7, 32);
+        state.editSub = 0;
+        state.nameCursor = 0;
+        break;
+      case PanelMode.FUNCTION: {
+        let n = state.functionParam;
+        do {
+          n = wrap(n + delta, 1, 32);
+        } while (!functionMap[n - 1]);
+        state.functionParam = n;
+        state.functionSub = 0;
+        break;
+      }
+      case PanelMode.STORE:
+        state.storeTarget = wrap((state.storeTarget ?? state.currentPatch) + delta, 1, 32);
+        break;
+    }
+  }
+
+  /**
    * Confirm-style FUNCTION entries executed by YES (spec 5.9 / manual
    * function chapter). Returns true when the press was consumed.
    */
@@ -330,6 +365,7 @@ export function createStore() {
     dispatch(action) {
       switch (action.type) {
         case 'panelButtonPressed': {
+          state.lastButton = action.id;
           const numbered = /^btn-(\d\d)$/.exec(action.id);
           if (numbered) handleNumbered(Number(numbered[1]));
           else buttonHandlers[action.id]?.();
@@ -347,6 +383,14 @@ export function createStore() {
           break;
         case 'adjustParam':
           adjustParam(action.delta);
+          break;
+        case 'navigateParam':
+          navigateParam(action.delta);
+          break;
+        case 'escape':
+          // Keyboard Escape: straight back to PLAY (spec 12.2).
+          state.storeTarget = null;
+          enterMode(PanelMode.PLAY);
           break;
         case 'dataEntry': {
           // Absolute-position slider (spec 5.3): normalized 0-1 maps onto

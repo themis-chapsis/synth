@@ -13,7 +13,7 @@ import { SevenSegment } from './panel/SevenSegment.js';
 import { sliders, modeButtons, numberedButtons, display } from './panel/panelLayout.js';
 import { store } from './state/store.js';
 import { createEngine } from './engine/audio-worklet.js';
-import { installKeyboardMap } from './panel/keyboardMap.js';
+import { installKeyboardMap, bindingHelp } from './panel/keyboardMap.js';
 import { parseBulkDump } from './sysex/dx7-sysex.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -77,10 +77,39 @@ function boot() {
   window.addEventListener('pointerdown', ensureEngine, { once: true });
   window.addEventListener('keydown', ensureEngine, { once: true });
 
+  // `?` help overlay listing every binding (spec 12.2).
+  const help = document.createElement('div');
+  help.className = 'help-overlay';
+  help.hidden = true;
+  help.innerHTML =
+    '<h2>Keyboard bindings</h2><table>' +
+    bindingHelp.map(([k, d]) => `<tr><td>${k}</td><td>${d}</td></tr>`).join('') +
+    '</table>';
+  document.body.appendChild(help);
+
+  // Keyboard shortcuts press the same buttons pointers do, with a brief
+  // visual flash on the panel.
+  const pressButton = (id) => {
+    store.dispatch({ type: 'panelButtonPressed', id });
+    const btn = buttons.get(id);
+    if (btn) {
+      btn.setPressed(true);
+      setTimeout(() => btn.setPressed(false), 100);
+    }
+  };
+
   installKeyboardMap({
     noteOn: (note, velocity) => ensureEngine().then((e) => e.noteOn(note, velocity)),
     noteOff: (note) => ensureEngine().then((e) => e.noteOff(note)),
-    adjust: (delta) => store.dispatch({ type: 'adjustParam', delta })
+    adjust: (delta) => store.dispatch({ type: 'adjustParam', delta }),
+    pressButton,
+    navigate: (delta) => store.dispatch({ type: 'navigateParam', delta }),
+    escape: () => store.dispatch({ type: 'escape' }),
+    repeatLast: () => {
+      const last = store.getState().lastButton;
+      if (last) pressButton(last);
+    },
+    toggleHelp: () => { help.hidden = !help.hidden; }
   });
   store.subscribe(syncVoice);
 
