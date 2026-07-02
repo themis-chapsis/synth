@@ -1,7 +1,16 @@
 /**
  * Panel geometry and silkscreen data — the single source of truth for the
- * visual layout. All coordinates are in the fixed 1920x200 viewBox space
+ * visual layout. All coordinates are in the fixed 1920x812 viewBox space
  * (spec section 4.2); nothing here is a CSS pixel.
+ *
+ * Layout (per the reference design): three stacked zones separated by a
+ * divider —
+ *   Zone 1 (top): sliders + mode/utility cluster on the left, LCD/LED
+ *                 display on the right.
+ *   Zone 2:       numbered buttons 1-16, full width, green EDIT legends
+ *                 above and orange FUNCTION legends below.
+ *   Zone 3:       numbered buttons 17-32, same arrangement, set well below
+ *                 zone 2 so the two legend bands read clearly.
  *
  * Legend text was cross-checked against the original Operation Manual's
  * EDIT/FUNCTION mode chapters (via secondary sources; see /reference).
@@ -9,7 +18,10 @@
  * marked PROVISIONAL.
  */
 
-export const VIEW = { w: 1920, h: 200 };
+export const VIEW = { w: 1920, h: 812 };
+
+/** Full-width divider between the top control zone and the button zones. */
+export const divider = { y: 372, x1: 24, x2: 1896 };
 
 /* ------------------------------------------------------------------ *
  * Sliders                                                             *
@@ -18,26 +30,26 @@ export const VIEW = { w: 1920, h: 200 };
 export const sliders = [
   // Spec 5.2/5.3: VOLUME is audio-only, DATA ENTRY drives the selected
   // parameter. Identical visual style.
-  { id: 'volume', label: 'VOLUME', x: 46, trackTop: 68, trackBottom: 158, initial: 0.8 },
-  { id: 'data-entry', label: 'DATA ENTRY', x: 116, trackTop: 68, trackBottom: 158, initial: 0.5 }
+  { id: 'volume', label: 'VOLUME', x: 66, trackTop: 150, trackBottom: 300, initial: 0.8 },
+  { id: 'data-entry', label: 'DATA ENTRY', x: 156, trackTop: 150, trackBottom: 300, initial: 0.5 }
 ];
 
 /* ------------------------------------------------------------------ *
  * Mode / utility membrane buttons                                     *
  * ------------------------------------------------------------------ */
 
-const MODE_BTN = { w: 46, h: 24 };
-const ROW_TOP = 66;
-const ROW_BOT = 126;
-const COL = [252, 320, 388, 456, 524];
+const MODE_BTN = { w: 64, h: 36 };
+const ROW_TOP = 156;
+const ROW_BOT = 258;
+const COL = [400, 500, 600, 700, 800];
 
 export const modeButtons = [
   // PROVISIONAL: NO/YES placement (right of DATA ENTRY, side by side).
   // The `char` field is the voice-name character printed in the button
   // corner (manual: "reversed dark brown type"); NO/YES double as the
   // name cursor keys < and >.
-  { id: 'no', x: 158, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)', char: '<', autoRepeat: true },
-  { id: 'yes', x: 202, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)', char: '>', autoRepeat: true },
+  { id: 'no', x: 216, y: ROW_BOT, w: 60, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)', char: '<', autoRepeat: true },
+  { id: 'yes', x: 288, y: ROW_BOT, w: 60, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)', char: '>', autoRepeat: true },
 
   { id: 'store', x: COL[0], y: ROW_TOP, ...MODE_BTN, color: 'orange', label: 'STORE', char: 'W' },
   { id: 'mem-protect-int', x: COL[1], y: ROW_TOP, ...MODE_BTN, color: 'cream', label: 'INTERNAL', char: 'X' },
@@ -59,32 +71,34 @@ export function buttonChar(n) {
 
 /** Green bracket groupings over the mode cluster. */
 export const modeBrackets = [
-  { label: 'MEMORY PROTECT', x1: COL[1], x2: COL[2] + MODE_BTN.w, y: 48 },
-  { label: 'MEMORY SELECT', x1: COL[2], x2: COL[3] + MODE_BTN.w, y: 108 }
+  { label: 'MEMORY PROTECT', x1: COL[1], x2: COL[2] + MODE_BTN.w, y: 132 },
+  { label: 'MEMORY SELECT', x1: COL[2], x2: COL[3] + MODE_BTN.w, y: 234 }
 ];
 
 /* ------------------------------------------------------------------ *
- * Display block (LCD + 7-segment LED)                                 *
+ * Display block (LCD + 7-segment LED), top-right of zone 1            *
  * ------------------------------------------------------------------ */
 
 export const display = {
-  bezel: { x: 590, y: 52, w: 412, h: 116 },
+  bezel: { x: 1120, y: 120, w: 752, h: 214 },
   // LCD canvas natural size is computed by the LCD component; this is the
-  // mount rectangle in viewBox units.
-  lcd: { x: 606, y: 78, w: 297, h: 63 },
-  led: { x: 916, y: 80, w: 74, h: 58 }
+  // mount rectangle in viewBox units. Its ratio must track the canvas
+  // aspect (~4.71:1) so the dot grid stays square.
+  lcd: { x: 1152, y: 165, w: 524, h: 111 },
+  // LED ratio ~1.27:1 to match the 7-segment canvas.
+  led: { x: 1712, y: 168, w: 132, h: 104 }
 };
 
 /* ------------------------------------------------------------------ *
- * The 32 numbered membrane buttons                                    *
+ * The 32 numbered membrane buttons, in two full-width zones           *
  * ------------------------------------------------------------------ */
 
 const MATRIX = {
-  x0: 1022, // left edge of button 1 / 17
-  pitch: 55,
-  btnW: 42,
-  btnH: 26,
-  rowY: [36, 122] // top edge of button rows 1-16 and 17-32
+  x0: 61, // left edge of button 1 / 17
+  pitch: 114,
+  btnW: 88,
+  btnH: 58,
+  rowY: [452, 672] // top edge of button rows 1-16 (zone 2) and 17-32 (zone 3)
 };
 
 export const matrix = MATRIX;

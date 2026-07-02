@@ -64,15 +64,19 @@ export class MembraneButton {
     sheen.setAttribute('stroke-width', 0.7);
     slot.appendChild(sheen);
 
+    // Legend type scales with the button so it reads at any panel size.
+    const charSize = Math.max(6, Math.round(def.h * 0.17));
+    const numSize = Math.round(def.h * 0.32);
+
     if (def.char) {
       // Voice-name character legend in the button corner (manual:
       // "reversed dark brown type in the right corner of most buttons").
       const ch = document.createElementNS(SVG_NS, 'text');
-      ch.setAttribute('x', def.x + def.w - 3);
-      ch.setAttribute('y', def.y + 8);
+      ch.setAttribute('x', def.x + def.w - charSize * 0.6);
+      ch.setAttribute('y', def.y + charSize + 2);
       ch.setAttribute('text-anchor', 'end');
       ch.setAttribute('font-family', "'Barlow Condensed', 'Arial Narrow', sans-serif");
-      ch.setAttribute('font-size', 6);
+      ch.setAttribute('font-size', charSize);
       ch.setAttribute('font-weight', 600);
       ch.setAttribute('fill', '#31241a');
       ch.textContent = def.char;
@@ -83,10 +87,10 @@ export class MembraneButton {
     if (def.number != null) {
       const num = document.createElementNS(SVG_NS, 'text');
       num.setAttribute('x', def.x + def.w / 2);
-      num.setAttribute('y', def.y + def.h / 2 + 4);
+      num.setAttribute('y', def.y + def.h / 2 + numSize * 0.36);
       num.setAttribute('text-anchor', 'middle');
       num.setAttribute('font-family', "'Barlow Condensed', 'Arial Narrow', sans-serif");
-      num.setAttribute('font-size', 12);
+      num.setAttribute('font-size', numSize);
       num.setAttribute('font-weight', 600);
       // Spec section 2: white middle label (the number) on the cyan button.
       num.setAttribute('fill', '#f4f6f6');
