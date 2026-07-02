@@ -18,7 +18,7 @@
  * marked PROVISIONAL.
  */
 
-export const VIEW = { w: 1920, h: 812 };
+export const VIEW = { w: 1920, h: 820 };
 
 /** Full-width divider between the top control zone and the button zones. */
 export const divider = { y: 372, x1: 24, x2: 1896 };
@@ -30,26 +30,28 @@ export const divider = { y: 372, x1: 24, x2: 1896 };
 export const sliders = [
   // Spec 5.2/5.3: VOLUME is audio-only, DATA ENTRY drives the selected
   // parameter. Identical visual style.
-  { id: 'volume', label: 'VOLUME', x: 66, trackTop: 150, trackBottom: 300, initial: 0.8 },
-  { id: 'data-entry', label: 'DATA ENTRY', x: 156, trackTop: 150, trackBottom: 300, initial: 0.5 }
+  { id: 'volume', label: 'VOLUME', x: 60, trackTop: 150, trackBottom: 300, initial: 0.8 },
+  { id: 'data-entry', label: 'DATA ENTRY', x: 150, trackTop: 150, trackBottom: 300, initial: 0.5 }
 ];
 
 /* ------------------------------------------------------------------ *
  * Mode / utility membrane buttons                                     *
- * ------------------------------------------------------------------ */
+ * ------------------------------------------------------------------ *
+ * Wide buttons so the two/three-line labels (OPERATOR SELECT, EDIT/
+ * COMPARE/CHARACTER, CARTRIDGE) have room for legible type.           */
 
-const MODE_BTN = { w: 64, h: 36 };
-const ROW_TOP = 156;
-const ROW_BOT = 258;
-const COL = [400, 500, 600, 700, 800];
+const MODE_BTN = { w: 92, h: 44 };
+const ROW_TOP = 150;
+const ROW_BOT = 262;
+const COL = [456, 574, 692, 810, 928];
 
 export const modeButtons = [
   // PROVISIONAL: NO/YES placement (right of DATA ENTRY, side by side).
   // The `char` field is the voice-name character printed in the button
   // corner (manual: "reversed dark brown type"); NO/YES double as the
   // name cursor keys < and >.
-  { id: 'no', x: 216, y: ROW_BOT, w: 60, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)', char: '<', autoRepeat: true },
-  { id: 'yes', x: 288, y: ROW_BOT, w: 60, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)', char: '>', autoRepeat: true },
+  { id: 'no', x: 214, y: ROW_BOT, w: 92, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)', char: '<', autoRepeat: true },
+  { id: 'yes', x: 326, y: ROW_BOT, w: 92, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)', char: '>', autoRepeat: true },
 
   { id: 'store', x: COL[0], y: ROW_TOP, ...MODE_BTN, color: 'orange', label: 'STORE', char: 'W' },
   { id: 'mem-protect-int', x: COL[1], y: ROW_TOP, ...MODE_BTN, color: 'cream', label: 'INTERNAL', char: 'X' },
@@ -71,7 +73,7 @@ export function buttonChar(n) {
 
 /** Green bracket groupings over the mode cluster. */
 export const modeBrackets = [
-  { label: 'MEMORY PROTECT', x1: COL[1], x2: COL[2] + MODE_BTN.w, y: 132 },
+  { label: 'MEMORY PROTECT', x1: COL[1], x2: COL[2] + MODE_BTN.w, y: 122 },
   { label: 'MEMORY SELECT', x1: COL[2], x2: COL[3] + MODE_BTN.w, y: 234 }
 ];
 
