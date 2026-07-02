@@ -18,7 +18,7 @@
  * marked PROVISIONAL.
  */
 
-export const VIEW = { w: 1920, h: 820 };
+export const VIEW = { w: 1920, h: 844 };
 
 /** Full-width divider between the top control zone and the button zones. */
 export const divider = { y: 372, x1: 24, x2: 1896 };
@@ -73,8 +73,8 @@ export function buttonChar(n) {
 
 /** Green bracket groupings over the mode cluster. */
 export const modeBrackets = [
-  { label: 'MEMORY PROTECT', x1: COL[1], x2: COL[2] + MODE_BTN.w, y: 122 },
-  { label: 'MEMORY SELECT', x1: COL[2], x2: COL[3] + MODE_BTN.w, y: 234 }
+  { label: 'MEMORY PROTECT', x1: COL[1], x2: COL[2] + MODE_BTN.w, y: 114 },
+  { label: 'MEMORY SELECT', x1: COL[2], x2: COL[3] + MODE_BTN.w, y: 226 }
 ];
 
 /* ------------------------------------------------------------------ *
@@ -100,7 +100,7 @@ const MATRIX = {
   pitch: 114,
   btnW: 88,
   btnH: 58,
-  rowY: [452, 672] // top edge of button rows 1-16 (zone 2) and 17-32 (zone 3)
+  rowY: [452, 696] // top edge of button rows 1-16 (zone 2) and 17-32 (zone 3)
 };
 
 export const matrix = MATRIX;
