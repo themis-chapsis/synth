@@ -161,11 +161,21 @@ function boot() {
     const { voices } = parseBulkDump(new Uint8Array(buffer));
     store.dispatch({ type: 'loadBank', bank, voices, silent });
   };
-  const bootBank = (url, bank) =>
-    fetch(url)
+  // The standalone single-file build inlines the two factory banks as
+  // base64 (window.__DX7_BANKS__) so nothing is fetched; normal builds
+  // fetch the emitted .syx assets.
+  const inlineBanks = globalThis.__DX7_BANKS__;
+  const b64ToBytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const bootBank = (source, bank) => {
+    if (inlineBanks) {
+      loadSysex(b64ToBytes(inlineBanks[bank]).buffer, bank, true);
+      return Promise.resolve();
+    }
+    return fetch(source)
       .then((r) => (r.ok ? r.arrayBuffer() : null))
       .then((buf) => buf && loadSysex(buf, bank, true))
       .catch((err) => console.error('[sysex] boot bank failed:', err));
+  };
   bootBank(new URL('./sysex/rom1a.syx', import.meta.url), 'internal')
     .then(() => bootBank(new URL('./sysex/rom1b.syx', import.meta.url), 'cartridge'));
   window.addEventListener('dragover', (e) => e.preventDefault());

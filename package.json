@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "screenshot": "node scripts/screenshot.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "standalone": "vite build && node scripts/build-standalone.mjs"
   },
   "devDependencies": {
     "@fontsource/barlow-condensed": "^5.2.5",

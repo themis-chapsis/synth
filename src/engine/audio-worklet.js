@@ -22,7 +22,18 @@
  */
 export async function createEngine(initialVolume = 0.8) {
   const ctx = new AudioContext();
-  await ctx.audioWorklet.addModule(new URL('./dx7-processor.js', import.meta.url));
+  // Standalone single-file build inlines the worklet source and exposes it
+  // as a string so it can be loaded from a blob URL (no separate fetchable
+  // file, which lets the app run straight from a double-clicked file://
+  // page). Normal builds load the emitted worklet asset.
+  // A data: URL (not blob:) is used for the inline source so the worklet
+  // still loads when the page is opened from an opaque origin — i.e. a
+  // double-clicked file:// page, where blob-URL worklets are blocked.
+  const inlineSrc = globalThis.__DX7_WORKLET_SRC__;
+  const workletUrl = inlineSrc
+    ? 'data:text/javascript;base64,' + btoa(unescape(encodeURIComponent(inlineSrc)))
+    : new URL('./dx7-processor.js', import.meta.url);
+  await ctx.audioWorklet.addModule(workletUrl);
 
   const node = new AudioWorkletNode(ctx, 'dx7-processor', {
     numberOfInputs: 0,
