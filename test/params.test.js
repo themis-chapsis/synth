@@ -130,11 +130,12 @@ describe('COMPARE shows the unedited voice (spec 5.8)', () => {
 describe('FUNCTION values', () => {
   beforeEach(() => press('function'));
 
-  it('master tune displays signed around center', () => {
+  it('master tune is slider-only, displayed signed around center', () => {
     expect(row(1)).toBe('       0        ');
-    press('yes');
-    press('yes');
-    expect(row(1)).toBe('      +2        ');
+    press('yes'); // manual: -1/+1 buttons are not used for master tune
+    expect(row(1)).toBe('       0        ');
+    store.dispatch({ type: 'dataEntry', value: 1 });
+    expect(row(1)).toBe('     +63        ');
   });
 
   it('midi channel and sys-info sub-parameters hold separate values', () => {
@@ -150,7 +151,7 @@ describe('FUNCTION values', () => {
 
   it('status-style entries show no value row and ignore YES', () => {
     press('btn-14'); // battery check, display only
-    expect(row(0)).toBe('BATTERY VOLT=3.9');
+    expect(row(0)).toBe('BATTERY VOLT=3.0');
     expect(row(1)).toBe('                ');
     press('yes'); // nothing to adjust or confirm here
     expect(state().mode).toBe('FUNCTION');

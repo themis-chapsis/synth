@@ -33,19 +33,29 @@ const COL = [252, 320, 388, 456, 524];
 
 export const modeButtons = [
   // PROVISIONAL: NO/YES placement (right of DATA ENTRY, side by side).
-  { id: 'no', x: 158, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)', autoRepeat: true },
-  { id: 'yes', x: 202, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)', autoRepeat: true },
+  // The `char` field is the voice-name character printed in the button
+  // corner (manual: "reversed dark brown type"); NO/YES double as the
+  // name cursor keys < and >.
+  { id: 'no', x: 158, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'NO (-1)', char: '<', autoRepeat: true },
+  { id: 'yes', x: 202, y: ROW_BOT, w: 38, h: MODE_BTN.h, color: 'cream', label: 'YES (+1)', char: '>', autoRepeat: true },
 
-  { id: 'store', x: COL[0], y: ROW_TOP, ...MODE_BTN, color: 'orange', label: 'STORE' },
-  { id: 'mem-protect-int', x: COL[1], y: ROW_TOP, ...MODE_BTN, color: 'cream', label: 'INTERNAL' },
-  { id: 'mem-protect-crt', x: COL[2], y: ROW_TOP, ...MODE_BTN, color: 'cream', label: 'CARTRIDGE' },
+  { id: 'store', x: COL[0], y: ROW_TOP, ...MODE_BTN, color: 'orange', label: 'STORE', char: 'W' },
+  { id: 'mem-protect-int', x: COL[1], y: ROW_TOP, ...MODE_BTN, color: 'cream', label: 'INTERNAL', char: 'X' },
+  { id: 'mem-protect-crt', x: COL[2], y: ROW_TOP, ...MODE_BTN, color: 'cream', label: 'CARTRIDGE', char: 'Y' },
 
-  { id: 'operator-select', x: COL[0], y: ROW_BOT, ...MODE_BTN, color: 'blueLight', label: 'OPERATOR\nSELECT' },
-  { id: 'edit-compare', x: COL[1], y: ROW_BOT, ...MODE_BTN, color: 'blueLight', label: 'EDIT/\nCOMPARE' },
-  { id: 'mem-select-int', x: COL[2], y: ROW_BOT, ...MODE_BTN, color: 'cyan', label: 'INTERNAL' },
-  { id: 'mem-select-crt', x: COL[3], y: ROW_BOT, ...MODE_BTN, color: 'cyan', label: 'CARTRIDGE' },
-  { id: 'function', x: COL[4], y: ROW_BOT, ...MODE_BTN, color: 'yellow', label: 'FUNCTION' }
+  { id: 'operator-select', x: COL[0], y: ROW_BOT, ...MODE_BTN, color: 'blueLight', label: 'OPERATOR\nSELECT', char: 'Z' },
+  { id: 'edit-compare', x: COL[1], y: ROW_BOT, ...MODE_BTN, color: 'blueLight', label: 'EDIT/\nCOMPARE\nCHARACTER' },
+  { id: 'mem-select-int', x: COL[2], y: ROW_BOT, ...MODE_BTN, color: 'cyan', label: 'INTERNAL', char: '-' },
+  { id: 'mem-select-crt', x: COL[3], y: ROW_BOT, ...MODE_BTN, color: 'cyan', label: 'CARTRIDGE', char: '.' },
+  { id: 'function', x: COL[4], y: ROW_BOT, ...MODE_BTN, color: 'yellow', label: 'FUNCTION', char: 'SP' }
 ];
+
+/** Voice-name character for a numbered button (1-10 digits, 11-32 A-V). */
+export function buttonChar(n) {
+  if (n <= 9) return String(n);
+  if (n === 10) return '0';
+  return String.fromCharCode(65 + n - 11);
+}
 
 /** Green bracket groupings over the mode cluster. */
 export const modeBrackets = [
@@ -86,6 +96,7 @@ export const numberedButtons = Array.from({ length: 32 }, (_, i) => {
   return {
     id: `btn-${String(i + 1).padStart(2, '0')}`,
     number: i + 1,
+    char: buttonChar(i + 1),
     x: MATRIX.x0 + col * MATRIX.pitch,
     y: MATRIX.rowY[row],
     w: MATRIX.btnW,
@@ -133,7 +144,7 @@ export const functionLegends = [
   'RANGE', 'STEP',
   'MODE', 'GLISSANDO', 'TIME',
   'MIDI',
-  'EDIT\nRECALL', 'VOICE\nINIT', 'CRT\nFORM', '', '', 'BATT\nCHK', 'CRT\nSAVE', 'CRT\nLOAD',
+  'EDIT\nRECALL', 'VOICE\nINIT', 'CART\nFORM', '', '', 'BATTERY\nCHECK', 'SAVE', 'LOAD',
   'RANGE', 'PITCH', 'AMPLITUDE', 'EG BIAS',
   'RANGE', 'PITCH', 'AMPLITUDE', 'EG BIAS',
   'RANGE', 'PITCH', 'AMPLITUDE', 'EG BIAS',
@@ -144,6 +155,7 @@ export const functionLegends = [
 export const functionBrackets = [
   { from: 3, to: 4, label: 'PITCH BEND' },
   { from: 5, to: 7, label: 'PORTAMENTO' },
+  { from: 15, to: 16, label: 'CARTRIDGE' },
   { from: 17, to: 20, label: 'MODULATION WHEEL' },
   { from: 21, to: 24, label: 'FOOT CONTROL' },
   { from: 25, to: 28, label: 'BREATH CONTROL' },

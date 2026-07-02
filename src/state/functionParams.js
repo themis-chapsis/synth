@@ -17,6 +17,9 @@ export const functionParamDefs = {
     name: 'MASTER TUNE ADJ',
     range: [0, 127],
     default: 64,
+    // Manual: adjusted with the DATA ENTRY slider only; the -1/+1
+    // buttons are not used for this parameter.
+    sliderOnly: true,
     display: (v) => (v - 64 > 0 ? `+${v - 64}` : String(v - 64))
   },
   polyMono: { name: 'POLY/MONO', range: [0, 1], default: 0, display: (v) => (v ? 'MONO' : 'POLY') },

@@ -22,8 +22,25 @@ import {
 } from './voiceParams.js';
 import { functionParamDefs, initFunctionValues, functionTargetKey } from './functionParams.js';
 import { createBanks } from './patchBank.js';
+import { buttonChar } from '../panel/panelLayout.js';
 
 const clamp = (v, [min, max]) => Math.min(max, Math.max(min, v));
+
+/** Voice-name characters on the non-numbered buttons (controls chart). */
+const UTILITY_CHARS = {
+  store: 'W',
+  'mem-protect-int': 'X',
+  'mem-protect-crt': 'Y',
+  'operator-select': 'Z',
+  'mem-select-int': '-',
+  'mem-select-crt': '.',
+  function: ' '
+};
+
+/** Functions that require the manual's double YES confirmation. */
+const CONFIRM_FUNCTIONS = new Set([
+  'editRecall', 'voiceInit', 'cartridgeForm', 'cartridgeSave', 'cartridgeLoad'
+]);
 
 export function createStore() {
   const state = {
@@ -57,8 +74,12 @@ export function createStore() {
 
     /** transient full-screen LCD notice (e.g. MEMORY PROTECTED) */
     notice: null,
+    /** function param awaiting the second YES ("ARE YOU SURE?") */
+    confirmPending: null,
     /** last physical panel button, for the Space repeat shortcut */
     lastButton: null,
+    /** buttons currently held (CHARACTER-key name entry needs this) */
+    heldButtons: new Set(),
 
     lcd: ['', ''],
     led: ' 1',
@@ -103,7 +124,19 @@ export function createStore() {
 
   function enterMode(mode) {
     state.notice = null;
+    state.confirmPending = null;
     state.mode = mode;
+  }
+
+  /** Voice-name entry active: EDIT mode with VOICE NAME selected. */
+  function nameEditing() {
+    return state.mode === PanelMode.EDIT && state.editParam === 32;
+  }
+
+  /** Write a character at the cursor and advance (manual name entry). */
+  function enterNameChar(ch) {
+    state.voice[paramIndex.get(`name${state.nameCursor}`)] = ch.charCodeAt(0);
+    state.nameCursor = (state.nameCursor + 1) % 10;
   }
 
   function loadPatch(n) {
@@ -141,6 +174,7 @@ export function createStore() {
 
   function handleNumbered(n) {
     state.notice = null;
+    state.confirmPending = null;
     switch (state.mode) {
       case PanelMode.PLAY:
         loadPatch(n);
@@ -155,9 +189,7 @@ export function createStore() {
         if (entry.action === 'opOnOff') {
           state.opOnOff[entry.op - 1] = !state.opOnOff[entry.op - 1];
         } else if (entry.param === 'voiceName') {
-          // Re-pressing VOICE NAME advances the character cursor
-          // (PROVISIONAL name-entry scheme pending the manual).
-          state.nameCursor = state.editParam === 32 ? (state.nameCursor + 1) % 10 : 0;
+          if (state.editParam !== 32) state.nameCursor = 0;
           state.editParam = 32;
         } else {
           // Re-pressing a multi-function button cycles its sub-parameter.
@@ -211,6 +243,10 @@ export function createStore() {
   }
 
   function handleEditCompare() {
+    // During voice-name entry this button IS the CHARACTER shift key
+    // (manual: "converts the EDIT/COMPARE button to the CHARACTER
+    // button") — it must not toggle COMPARE.
+    if (nameEditing()) return;
     switch (state.mode) {
       case PanelMode.EDIT:
         enterMode(PanelMode.COMPARE);
@@ -245,7 +281,9 @@ export function createStore() {
 
   function adjustParam(delta) {
     const target = selectedTarget();
-    if (!target) return;
+    // sliderOnly: master tune takes DATA ENTRY only (manual: the -1/+1
+    // buttons are not used because the adjustment is already very fine).
+    if (!target || target.def.sliderOnly) return;
     const current = target.kind === 'voice' ? state.voice[target.idx] : state.funcValues[target.key];
     setTargetValue(target, current + delta);
   }
@@ -285,12 +323,23 @@ export function createStore() {
 
   /**
    * Confirm-style FUNCTION entries executed by YES (spec 5.9 / manual
-   * function chapter). Returns true when the press was consumed.
+   * function chapter): the first YES arms the "ARE YOU SURE?" prompt,
+   * the second executes. Returns true when the press was consumed.
    */
   function confirmFunction() {
     if (state.mode !== PanelMode.FUNCTION) return false;
     const entry = functionMap[state.functionParam - 1];
-    switch (entry?.param) {
+    if (!CONFIRM_FUNCTIONS.has(entry?.param)) return false;
+    if (state.confirmPending !== entry.param) {
+      state.confirmPending = entry.param;
+      return true;
+    }
+    state.confirmPending = null;
+    return executeFunction(entry.param);
+  }
+
+  function executeFunction(param) {
+    switch (param) {
       case 'editRecall':
         if (!state.recallVoice) return true;
         state.voice = state.recallVoice.slice();
@@ -327,7 +376,7 @@ export function createStore() {
         }
         return true;
       default:
-        return false; // value parameter: fall through to +1
+        return true;
     }
   }
 
@@ -336,12 +385,22 @@ export function createStore() {
     'edit-compare': handleEditCompare,
     function: handleFunction,
     no: () => {
-      if (state.mode === PanelMode.STORE) resolveStore(false);
-      else adjustParam(-1);
+      if (state.mode === PanelMode.STORE) { resolveStore(false); return; }
+      if (state.confirmPending) { state.confirmPending = null; return; }
+      // Manual: NO/YES are the name cursor keys < and > during entry.
+      if (nameEditing()) {
+        state.nameCursor = (state.nameCursor + 9) % 10;
+        return;
+      }
+      adjustParam(-1);
     },
     yes: () => {
-      if (state.mode === PanelMode.STORE) resolveStore(true);
-      else if (!confirmFunction()) adjustParam(+1);
+      if (state.mode === PanelMode.STORE) { resolveStore(true); return; }
+      if (nameEditing()) {
+        state.nameCursor = (state.nameCursor + 1) % 10;
+        return;
+      }
+      if (!confirmFunction()) adjustParam(+1);
     },
     'mem-select-int': () => { state.notice = null; state.bank = 'internal'; },
     'mem-select-crt': () => { state.notice = null; state.bank = 'cartridge'; },
@@ -366,13 +425,27 @@ export function createStore() {
       switch (action.type) {
         case 'panelButtonPressed': {
           state.lastButton = action.id;
+          state.heldButtons.add(action.id);
           const numbered = /^btn-(\d\d)$/.exec(action.id);
+
+          // CHARACTER-key name entry (manual): while EDIT/COMPARE is
+          // held during voice-name edit, buttons type their corner
+          // character instead of performing their normal role.
+          if (nameEditing() && state.heldButtons.has('edit-compare') && action.id !== 'edit-compare') {
+            const ch = numbered ? buttonChar(Number(numbered[1])) : UTILITY_CHARS[action.id];
+            if (ch != null) {
+              enterNameChar(ch);
+              break;
+            }
+          }
+
           if (numbered) handleNumbered(Number(numbered[1]));
           else buttonHandlers[action.id]?.();
           break;
         }
         case 'panelButtonReleased':
-          return; // no state change, skip the emit
+          state.heldButtons.delete(action.id);
+          return; // no display change, skip the emit
         case 'panelButtonRepeat':
           // Auto-repeat only steps parameters (spec 5.4); it must never
           // re-confirm a store prompt.
@@ -406,9 +479,12 @@ export function createStore() {
           break;
         case 'loadBank': {
           // A parsed 32-voice SysEx bank arriving as "cartridge insert"
-          // (or the boot-time factory bank into internal, spec 11).
+          // (or the boot-time factory banks, spec 11, which load silently
+          // so power-up lands on the PLAY screen like the original).
           state.banks[action.bank] = action.voices.map((v) => v.slice());
-          state.notice = [action.bank === 'internal' ? 'INTERNAL LOADED' : 'CARTRIDGE LOADED', ''];
+          if (!action.silent) {
+            state.notice = [action.bank === 'internal' ? 'INTERNAL LOADED' : 'CARTRIDGE LOADED', ''];
+          }
           // Reload the current patch if it came from the replaced bank so
           // the display and engine can't reference stale data.
           if (state.mode === PanelMode.PLAY && state.bank === action.bank) {

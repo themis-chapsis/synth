@@ -1,0 +1,4339 @@
+<!DOCTYPE html>
+<!-- saved from url=(0073)https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html -->
+<html class="v2" dir="ltr" xmlns="http://www.w3.org/1999/xhtml" xmlns:b="http://www.google.com/2005/gml/b" xmlns:data="http://www.google.com/2005/gml/data" xmlns:expr="http://www.google.com/2005/gml/expr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link href="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/2872013778-css_bundle_v2.css" rel="stylesheet" type="text/css">
+<meta content="width=1100" name="viewport">
+
+<meta content="blogger" name="generator">
+<link href="https://www.righto.com/favicon.ico" rel="icon" type="image/x-icon">
+<link href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html" rel="canonical">
+<link rel="alternate" type="application/atom+xml" title="Ken Shirriff&#39;s blog - Atom" href="https://www.righto.com/feeds/posts/default">
+<link rel="alternate" type="application/rss+xml" title="Ken Shirriff&#39;s blog - RSS" href="https://www.righto.com/feeds/posts/default?alt=rss">
+<link rel="service.post" type="application/atom+xml" title="Ken Shirriff&#39;s blog - Atom" href="https://www.blogger.com/feeds/6264947694886887540/posts/default">
+
+<link rel="alternate" type="application/atom+xml" title="Ken Shirriff&#39;s blog - Atom" href="https://www.righto.com/feeds/7599448188873380170/comments/default">
+<!--Can't find substitution for tag [blog.ieCssRetrofitLinks]-->
+<link href="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/die-labeled-w600.jpg" rel="image_src">
+<meta content="http://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html" property="og:url">
+<meta content="Yamaha DX7 chip reverse-engineering, part 6: the control registers" property="og:title">
+<meta content="  The Yamaha DX7 digital synthesizer (1983) was the classic synthesizer in 1980s pop music. It uses a technique called FM synthesis to produ..." property="og:description">
+<meta content="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_tetLbH_G0JKmyLXe7rQ60Dj_3K88h3YG1Q-fqIqZkLy7CssEOHZ3ErMVjGHKfnybZDK3PPrFBloBarjSDLoBSU0vKPNBfy6ON3w6Q4aodJItH27ieK5AWk1I-lVe-LTGE=w1200-h630-p-k-no-nu" property="og:image">
+<title>Yamaha DX7 chip reverse-engineering, part 6: the control registers</title>
+<style type="text/css">@font-face{font-family:'Play';font-style:normal;font-weight:400;font-display:swap;src:url(//fonts.gstatic.com/s/play/v21/6aez4K2oVqwIvtg2H70Q13HqPA.woff2)format('woff2');unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;}@font-face{font-family:'Play';font-style:normal;font-weight:400;font-display:swap;src:url(//fonts.gstatic.com/s/play/v21/6aez4K2oVqwIvtE2H70Q13HqPA.woff2)format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}@font-face{font-family:'Play';font-style:normal;font-weight:400;font-display:swap;src:url(//fonts.gstatic.com/s/play/v21/6aez4K2oVqwIvtY2H70Q13HqPA.woff2)format('woff2');unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;}@font-face{font-family:'Play';font-style:normal;font-weight:400;font-display:swap;src:url(//fonts.gstatic.com/s/play/v21/6aez4K2oVqwIvto2H70Q13HqPA.woff2)format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Play';font-style:normal;font-weight:400;font-display:swap;src:url(//fonts.gstatic.com/s/play/v21/6aez4K2oVqwIvts2H70Q13HqPA.woff2)format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Play';font-style:normal;font-weight:400;font-display:swap;src:url(//fonts.gstatic.com/s/play/v21/6aez4K2oVqwIvtU2H70Q13E.woff2)format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}</style>
+<style id="page-skin-1" type="text/css"><!--
+/*
+-----------------------------------------------
+Blogger Template Style
+Name:     Simple
+Designer: Blogger
+URL:      www.blogger.com
+----------------------------------------------- */
+/* Variable definitions
+====================
+<Variable name="keycolor" description="Main Color" type="color" default="#66bbdd"/>
+<Group description="Page Text" selector="body">
+<Variable name="body.font" description="Font" type="font"
+default="normal normal 12px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="body.text.color" description="Text Color" type="color" default="#222222"/>
+</Group>
+<Group description="Backgrounds" selector=".body-fauxcolumns-outer">
+<Variable name="body.background.color" description="Outer Background" type="color" default="#66bbdd"/>
+<Variable name="content.background.color" description="Main Background" type="color" default="#ffffff"/>
+<Variable name="header.background.color" description="Header Background" type="color" default="transparent"/>
+</Group>
+<Group description="Links" selector=".main-outer">
+<Variable name="link.color" description="Link Color" type="color" default="#2288bb"/>
+<Variable name="link.visited.color" description="Visited Color" type="color" default="#888888"/>
+<Variable name="link.hover.color" description="Hover Color" type="color" default="#33aaff"/>
+</Group>
+<Group description="Blog Title" selector=".header h1">
+<Variable name="header.font" description="Font" type="font"
+default="normal normal 60px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="header.text.color" description="Title Color" type="color" default="#3399bb" />
+</Group>
+<Group description="Blog Description" selector=".header .description">
+<Variable name="description.text.color" description="Description Color" type="color"
+default="#777777" />
+</Group>
+<Group description="Tabs Text" selector=".tabs-inner .widget li a">
+<Variable name="tabs.font" description="Font" type="font"
+default="normal normal 14px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="tabs.text.color" description="Text Color" type="color" default="#999999"/>
+<Variable name="tabs.selected.text.color" description="Selected Color" type="color" default="#000000"/>
+</Group>
+<Group description="Tabs Background" selector=".tabs-outer .PageList">
+<Variable name="tabs.background.color" description="Background Color" type="color" default="#f5f5f5"/>
+<Variable name="tabs.selected.background.color" description="Selected Color" type="color" default="#eeeeee"/>
+</Group>
+<Group description="Post Title" selector="h3.post-title, .comments h4">
+<Variable name="post.title.font" description="Font" type="font"
+default="normal normal 22px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+</Group>
+<Group description="Date Header" selector=".date-header">
+<Variable name="date.header.color" description="Text Color" type="color"
+default="#222222"/>
+<Variable name="date.header.background.color" description="Background Color" type="color"
+default="transparent"/>
+<Variable name="date.header.font" description="Text Font" type="font"
+default="normal bold 11px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="date.header.padding" description="Date Header Padding" type="string" default="inherit"/>
+<Variable name="date.header.letterspacing" description="Date Header Letter Spacing" type="string" default="inherit"/>
+<Variable name="date.header.margin" description="Date Header Margin" type="string" default="inherit"/>
+</Group>
+<Group description="Post Footer" selector=".post-footer">
+<Variable name="post.footer.text.color" description="Text Color" type="color" default="#666666"/>
+<Variable name="post.footer.background.color" description="Background Color" type="color"
+default="#f9f9f9"/>
+<Variable name="post.footer.border.color" description="Shadow Color" type="color" default="#eeeeee"/>
+</Group>
+<Group description="Gadgets" selector="h2">
+<Variable name="widget.title.font" description="Title Font" type="font"
+default="normal bold 11px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="widget.title.text.color" description="Title Color" type="color" default="#000000"/>
+<Variable name="widget.alternate.text.color" description="Alternate Color" type="color" default="#999999"/>
+</Group>
+<Group description="Images" selector=".main-inner">
+<Variable name="image.background.color" description="Background Color" type="color" default="#ffffff"/>
+<Variable name="image.border.color" description="Border Color" type="color" default="#eeeeee"/>
+<Variable name="image.text.color" description="Caption Text Color" type="color" default="#222222"/>
+</Group>
+<Group description="Accents" selector=".content-inner">
+<Variable name="body.rule.color" description="Separator Line Color" type="color" default="#eeeeee"/>
+<Variable name="tabs.border.color" description="Tabs Border Color" type="color" default="#eeeeee"/>
+</Group>
+<Variable name="body.background" description="Body Background" type="background"
+color="#f6fbf6" default="$(color) none repeat scroll top left"/>
+<Variable name="body.background.override" description="Body Background Override" type="string" default=""/>
+<Variable name="body.background.gradient.cap" description="Body Gradient Cap" type="url"
+default="url(https://resources.blogblog.com/blogblog/data/1kt/simple/gradients_light.png)"/>
+<Variable name="body.background.gradient.tile" description="Body Gradient Tile" type="url"
+default="url(https://resources.blogblog.com/blogblog/data/1kt/simple/body_gradient_tile_light.png)"/>
+<Variable name="content.background.color.selector" description="Content Background Color Selector" type="string" default=".content-inner"/>
+<Variable name="content.padding" description="Content Padding" type="length" default="10px" min="0" max="100px"/>
+<Variable name="content.padding.horizontal" description="Content Horizontal Padding" type="length" default="10px" min="0" max="100px"/>
+<Variable name="content.shadow.spread" description="Content Shadow Spread" type="length" default="40px" min="0" max="100px"/>
+<Variable name="content.shadow.spread.webkit" description="Content Shadow Spread (WebKit)" type="length" default="5px" min="0" max="100px"/>
+<Variable name="content.shadow.spread.ie" description="Content Shadow Spread (IE)" type="length" default="10px" min="0" max="100px"/>
+<Variable name="main.border.width" description="Main Border Width" type="length" default="0" min="0" max="10px"/>
+<Variable name="header.background.gradient" description="Header Gradient" type="url" default="none"/>
+<Variable name="header.shadow.offset.left" description="Header Shadow Offset Left" type="length" default="-1px" min="-50px" max="50px"/>
+<Variable name="header.shadow.offset.top" description="Header Shadow Offset Top" type="length" default="-1px" min="-50px" max="50px"/>
+<Variable name="header.shadow.spread" description="Header Shadow Spread" type="length" default="1px" min="0" max="100px"/>
+<Variable name="header.padding" description="Header Padding" type="length" default="30px" min="0" max="100px"/>
+<Variable name="header.border.size" description="Header Border Size" type="length" default="1px" min="0" max="10px"/>
+<Variable name="header.bottom.border.size" description="Header Bottom Border Size" type="length" default="0" min="0" max="10px"/>
+<Variable name="header.border.horizontalsize" description="Header Horizontal Border Size" type="length" default="0" min="0" max="10px"/>
+<Variable name="description.text.size" description="Description Text Size" type="string" default="140%"/>
+<Variable name="tabs.margin.top" description="Tabs Margin Top" type="length" default="0" min="0" max="100px"/>
+<Variable name="tabs.margin.side" description="Tabs Side Margin" type="length" default="30px" min="0" max="100px"/>
+<Variable name="tabs.background.gradient" description="Tabs Background Gradient" type="url"
+default="url(https://resources.blogblog.com/blogblog/data/1kt/simple/gradients_light.png)"/>
+<Variable name="tabs.border.width" description="Tabs Border Width" type="length" default="1px" min="0" max="10px"/>
+<Variable name="tabs.bevel.border.width" description="Tabs Bevel Border Width" type="length" default="1px" min="0" max="10px"/>
+<Variable name="post.margin.bottom" description="Post Bottom Margin" type="length" default="25px" min="0" max="100px"/>
+<Variable name="image.border.small.size" description="Image Border Small Size" type="length" default="2px" min="0" max="10px"/>
+<Variable name="image.border.large.size" description="Image Border Large Size" type="length" default="5px" min="0" max="10px"/>
+<Variable name="page.width.selector" description="Page Width Selector" type="string" default=".region-inner"/>
+<Variable name="page.width" description="Page Width" type="string" default="auto"/>
+<Variable name="main.section.margin" description="Main Section Margin" type="length" default="15px" min="0" max="100px"/>
+<Variable name="main.padding" description="Main Padding" type="length" default="15px" min="0" max="100px"/>
+<Variable name="main.padding.top" description="Main Padding Top" type="length" default="30px" min="0" max="100px"/>
+<Variable name="main.padding.bottom" description="Main Padding Bottom" type="length" default="30px" min="0" max="100px"/>
+<Variable name="paging.background"
+color="#ffffff"
+description="Background of blog paging area" type="background"
+default="transparent none no-repeat scroll top center"/>
+<Variable name="footer.bevel" description="Bevel border length of footer" type="length" default="0" min="0" max="10px"/>
+<Variable name="mobile.background.overlay" description="Mobile Background Overlay" type="string"
+default="transparent none repeat scroll top left"/>
+<Variable name="mobile.background.size" description="Mobile Background Size" type="string" default="auto"/>
+<Variable name="mobile.button.color" description="Mobile Button Color" type="color" default="#ffffff" />
+<Variable name="startSide" description="Side where text starts in blog language" type="automatic" default="left"/>
+<Variable name="endSide" description="Side where text ends in blog language" type="automatic" default="right"/>
+*/
+/* Content
+----------------------------------------------- */
+body {
+font: normal normal 14px Arial, Tahoma, Helvetica, FreeSans, sans-serif;
+color: #222222;
+background: #f6fbf6 none repeat scroll top left;
+padding: 0 40px 40px 40px;
+}
+html body .region-inner {
+min-width: 0;
+max-width: 100%;
+width: auto;
+}
+h2 {
+font-size: 22px;
+}
+a:link {
+text-decoration:none;
+color: #121fb3;
+}
+a:visited {
+text-decoration:none;
+color: #121fb3;
+}
+a:hover {
+text-decoration:underline;
+color: #1a00ff;
+}
+.body-fauxcolumn-outer .fauxcolumn-inner {
+background: transparent url(//www.blogblog.com/1kt/simple/body_gradient_tile_light.png) repeat scroll top left;
+_background-image: none;
+}
+.body-fauxcolumn-outer .cap-top {
+position: absolute;
+z-index: 1;
+height: 400px;
+width: 100%;
+}
+.body-fauxcolumn-outer .cap-top .cap-left {
+width: 100%;
+background: transparent url(//www.blogblog.com/1kt/simple/gradients_light.png) repeat-x scroll top left;
+_background-image: none;
+}
+.content-outer {
+-moz-box-shadow: 0 0 40px rgba(0, 0, 0, .15);
+-webkit-box-shadow: 0 0 5px rgba(0, 0, 0, .15);
+-goog-ms-box-shadow: 0 0 10px #333333;
+box-shadow: 0 0 40px rgba(0, 0, 0, .15);
+margin-bottom: 1px;
+}
+.content-inner {
+padding: 10px 10px;
+}
+.content-inner {
+background-color: #ffffff;
+}
+/* Header
+----------------------------------------------- */
+.header-outer {
+background: #f6fbf7 url(//www.blogblog.com/1kt/simple/gradients_light.png) repeat-x scroll 0 -400px;
+_background-image: none;
+}
+.Header h1 {
+font: normal normal 42px Play;
+color: #666666;
+text-shadow: 1px 2px 3px rgba(0, 0, 0, .2);
+}
+.Header h1 a {
+color: #666666;
+}
+.Header .description {
+font-size: 140%;
+color: #666666;
+}
+.header-inner .Header .titlewrapper {
+padding: 22px 30px;
+}
+.header-inner .Header .descriptionwrapper {
+padding: 0 30px;
+}
+/* Tabs
+----------------------------------------------- */
+.tabs-inner .section:first-child {
+border-top: 0 solid #eeeeee;
+}
+.tabs-inner .section:first-child ul {
+margin-top: -0;
+border-top: 0 solid #eeeeee;
+border-left: 0 solid #eeeeee;
+border-right: 0 solid #eeeeee;
+}
+.tabs-inner .widget ul {
+background: #f5f5f5 url(//www.blogblog.com/1kt/simple/gradients_light.png) repeat-x scroll 0 -800px;
+_background-image: none;
+border-bottom: 1px solid #eeeeee;
+margin-top: 0;
+margin-left: -30px;
+margin-right: -30px;
+}
+.tabs-inner .widget li a {
+display: inline-block;
+padding: .6em 1em;
+font: normal normal 14px Arial, Tahoma, Helvetica, FreeSans, sans-serif;
+color: #999999;
+border-left: 1px solid #ffffff;
+border-right: 1px solid #eeeeee;
+}
+.tabs-inner .widget li:first-child a {
+border-left: none;
+}
+.tabs-inner .widget li.selected a, .tabs-inner .widget li a:hover {
+color: #000000;
+background-color: #eeeeee;
+text-decoration: none;
+}
+/* Columns
+----------------------------------------------- */
+.main-outer {
+border-top: 0 solid #eeeeee;
+}
+.fauxcolumn-left-outer .fauxcolumn-inner {
+border-right: 1px solid #eeeeee;
+}
+.fauxcolumn-right-outer .fauxcolumn-inner {
+border-left: 1px solid #eeeeee;
+}
+/* Headings
+----------------------------------------------- */
+div.widget > h2,
+div.widget h2.title {
+margin: 0 0 1em 0;
+font: normal bold 11px Arial, Tahoma, Helvetica, FreeSans, sans-serif;
+color: #000000;
+}
+/* Widgets
+----------------------------------------------- */
+.widget .zippy {
+color: #999999;
+text-shadow: 2px 2px 1px rgba(0, 0, 0, .1);
+}
+.widget .popular-posts ul {
+list-style: none;
+}
+/* Posts
+----------------------------------------------- */
+h2.date-header {
+font: normal bold 11px Arial, Tahoma, Helvetica, FreeSans, sans-serif;
+}
+.date-header span {
+background-color: transparent;
+color: transparent;
+padding: inherit;
+letter-spacing: inherit;
+margin: inherit;
+}
+.main-inner {
+padding-top: 30px;
+padding-bottom: 30px;
+}
+.main-inner .column-center-inner {
+padding: 0 15px;
+}
+.main-inner .column-center-inner .section {
+margin: 0 15px;
+}
+.post {
+margin: 0 0 25px 0;
+}
+h3.post-title, .comments h4 {
+font: normal normal 22px Arial, Tahoma, Helvetica, FreeSans, sans-serif;
+margin: .75em 0 0;
+}
+.post-body {
+font-size: 110%;
+line-height: 1.4;
+position: relative;
+}
+.post-body img, .post-body .tr-caption-container, .Profile img, .Image img,
+.BlogList .item-thumbnail img {
+padding: 2px;
+background: #ffffff;
+border: 1px solid #ffffff;
+-moz-box-shadow: 1px 1px 5px rgba(0, 0, 0, .1);
+-webkit-box-shadow: 1px 1px 5px rgba(0, 0, 0, .1);
+box-shadow: 1px 1px 5px rgba(0, 0, 0, .1);
+}
+.post-body img, .post-body .tr-caption-container {
+padding: 5px;
+}
+.post-body .tr-caption-container {
+color: #222222;
+}
+.post-body .tr-caption-container img {
+padding: 0;
+background: transparent;
+border: none;
+-moz-box-shadow: 0 0 0 rgba(0, 0, 0, .1);
+-webkit-box-shadow: 0 0 0 rgba(0, 0, 0, .1);
+box-shadow: 0 0 0 rgba(0, 0, 0, .1);
+}
+.post-header {
+margin: 0 0 1.5em;
+line-height: 1.6;
+font-size: 90%;
+}
+.post-footer {
+margin: 20px -2px 0;
+padding: 5px 10px;
+color: #666666;
+background-color: #f9f9f9;
+border-bottom: 1px solid #eeeeee;
+line-height: 1.6;
+font-size: 90%;
+}
+#comments .comment-author {
+padding-top: 1.5em;
+border-top: 1px solid #eeeeee;
+background-position: 0 1.5em;
+}
+#comments .comment-author:first-child {
+padding-top: 0;
+border-top: none;
+}
+.avatar-image-container {
+margin: .2em 0 0;
+}
+#comments .avatar-image-container img {
+border: 1px solid #ffffff;
+}
+/* Comments
+----------------------------------------------- */
+.comments .comments-content .icon.blog-author {
+background-repeat: no-repeat;
+background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEgAACxIB0t1+/AAAAAd0SU1FB9sLFwMeCjjhcOMAAAD+SURBVDjLtZSvTgNBEIe/WRRnm3U8RC1neQdsm1zSBIU9VVF1FkUguQQsD9ITmD7ECZIJSE4OZo9stoVjC/zc7ky+zH9hXwVwDpTAWWLrgS3QAe8AZgaAJI5zYAmc8r0G4AHYHQKVwII8PZrZFsBFkeRCABYiMh9BRUhnSkPTNCtVXYXURi1FpBDgArj8QU1eVXUzfnjv7yP7kwu1mYrkWlU33vs1QNu2qU8pwN0UpKoqokjWwCztrMuBhEhmh8bD5UDqur75asbcX0BGUB9/HAMB+r32hznJgXy2v0sGLBcyAJ1EK3LFcbo1s91JeLwAbwGYu7TP/3ZGfnXYPgAVNngtqatUNgAAAABJRU5ErkJggg==);
+}
+.comments .comments-content .loadmore a {
+border-top: 1px solid #999999;
+border-bottom: 1px solid #999999;
+}
+.comments .comment-thread.inline-thread {
+background-color: #f9f9f9;
+}
+.comments .continue {
+border-top: 2px solid #999999;
+}
+/* Accents
+---------------------------------------------- */
+.section-columns td.columns-cell {
+border-left: 1px solid #eeeeee;
+}
+.blog-pager {
+background: transparent none no-repeat scroll top center;
+}
+.blog-pager-older-link, .home-link,
+.blog-pager-newer-link {
+background-color: #ffffff;
+padding: 5px;
+}
+.footer-outer {
+border-top: 0 dashed #bbbbbb;
+}
+/* Mobile
+----------------------------------------------- */
+body.mobile  {
+background-size: auto;
+}
+.mobile .body-fauxcolumn-outer {
+background: transparent none repeat scroll top left;
+}
+.mobile .body-fauxcolumn-outer .cap-top {
+background-size: 100% auto;
+}
+.mobile .content-outer {
+-webkit-box-shadow: 0 0 3px rgba(0, 0, 0, .15);
+box-shadow: 0 0 3px rgba(0, 0, 0, .15);
+}
+.mobile .tabs-inner .widget ul {
+margin-left: 0;
+margin-right: 0;
+}
+.mobile .post {
+margin: 0;
+}
+.mobile .main-inner .column-center-inner .section {
+margin: 0;
+}
+.mobile .date-header span {
+padding: 0.1em 10px;
+margin: 0 -10px;
+}
+.mobile h3.post-title {
+margin: 0;
+}
+.mobile .blog-pager {
+background: transparent none no-repeat scroll top center;
+}
+.mobile .footer-outer {
+border-top: none;
+}
+.mobile .main-inner, .mobile .footer-inner {
+background-color: #ffffff;
+}
+.mobile-index-contents {
+color: #222222;
+}
+.mobile-link-button {
+background-color: #121fb3;
+}
+.mobile-link-button a:link, .mobile-link-button a:visited {
+color: #ffffff;
+}
+.mobile .tabs-inner .section:first-child {
+border-top: none;
+}
+.mobile .tabs-inner .PageList .widget-content {
+background-color: #eeeeee;
+color: #000000;
+border-top: 1px solid #eeeeee;
+border-bottom: 1px solid #eeeeee;
+}
+.mobile .tabs-inner .PageList .widget-content .pagelist-arrow {
+border-left: 1px solid #eeeeee;
+}
+.content-outer {
+max-width: 1400px !important;
+}
+/* fix header */
+#header-inner {
+width: 100% !important;
+background-position: right !important;
+}
+.titlewrapper {
+padding: 11px 30px 0 !important;
+}
+.descriptionwrapper {
+margin-bottom: 0 !important;
+}
+.description {
+font-size: 120% !important;
+}
+/* suppress things */
+.date-header {
+display: none;
+}
+#Attribution1 {
+display: none;
+}
+.post-author, .post-timestamp, .reaction-buttons  {
+display: none;
+}
+/* h2: sidebar titles */
+/* h3: post title */
+.post-title , .entry-title {
+font-size: 180% !important;
+margin-top: 0 !important;
+}
+.entry-title a:link, .entry-title a:visited, .entry-title a:active{
+color: #a03;
+}
+#main h2 {
+color:#333;
+margin-bottom:.4em;
+margin-top: 13px;
+font-size:140%;
+}
+#main h3 {
+color:#333;
+margin-bottom:.4em;
+margin-top: 13px;
+font-size:110%;
+}
+#main h4 {
+color:#333;
+margin-bottom:.5em;
+}
+#sidebar-right-1 a:link, #sidebar-right-1 a:visited, #sidebar-right-1 a:active {
+color: #666;
+}
+#sidebar-right-1 h2 {
+font-size: 100%;
+color: #666;
+}
+/* disable image box */
+element.style {
+}
+table.chargers img {
+height: 18px;
+}
+table.chargers img {
+height: 18px;
+}
+.post-body img, .post-body .tr-caption-container {
+padding: 5px;
+}
+.post-body img, .post-body .tr-caption-container, .Profile img, .Image img, .BlogList .item-thumbnail img {
+padding: 0;
+background: #ffffff;
+border: none;
+-moz-box-shadow: none;
+-webkit-box-shadow: none;
+box-shadow: none;
+}
+/* Special items */
+.mobile img {
+width: 100%;
+height: auto;
+}
+a:link img.hilite, a:visited img.hilite {
+color: #fff;
+}
+a:hover img.hilite, a:hover img.hilite2 {
+color: #f66;
+}
+a:active img.hilite {
+color: #33c;
+}
+.hilite {cursor:zoom-in}
+pre {color:#000000;border:1px solid #000000;}
+pre.repl { background-color:#e0e0f0; font-size:120%;}
+pre.arc { background-color:#e0e0f0; font-size:120%;}
+pre.code { background-color:#e0f0e0; font-size:120%; white-space:pre-wrap;white-space:-moz-pre-wrap;white-space:-pre-wrap;white-space:-o-pre-wrap;word-wrap:break-word;text-wrap:unrestricted;}
+code { font-size: 100%;}
+blockquote { font-size: 110%; background: transparent url("//static.righto.com/images/blockquote.gif") no-repeat 0 0; margin: 20px 0px; padding: 0px 40px;}
+div.cite {font-size: .8em;.; font-style: italic; color: #888; margin-bottom: 9px;}
+a.ref { color: gray;vertical-align: super; text-decoration: none; font-size:60%;margin-left: 2px;}
+a img.hilite {
+border: 1px solid;
+color: #888;
+z-index: 2;
+}
+a img.hilite2, a:active img.hilite2 {
+border: 1px solid;
+color: #f6fbf6;
+}
+table.chargers {
+border-width: 1px;
+border-spacing: 2px;
+border-style: outset;
+border-color: gray;
+border-collapse: collapse;
+background-color: white;
+}
+table.chargers th.maker {
+padding-right: 5px;
+text-align: right;
+}
+table.chargers th {
+border-width: 1px;
+padding: 3px;
+border-style: inset;
+border-color: gray;
+background-color: white;
+text-align: center;
+}
+table.chargers img {
+height: 18px;
+}
+table.chargers td {
+text-align: center;
+border-width: 1px;
+padding: 2px 8px;
+border-style: inset;
+border-color: gray;
+background-color: white;
+}
+--></style>
+<style id="template-skin-1" type="text/css"><!--
+body {
+min-width: 750px;
+}
+.content-outer, .content-fauxcolumn-outer, .region-inner {
+min-width: 750px;
+max-width: 750px;
+_width: 750px;
+}
+.main-inner .columns {
+padding-left: 0px;
+padding-right: 240px;
+}
+.main-inner .fauxcolumn-center-outer {
+left: 0px;
+right: 240px;
+/* IE6 does not respect left and right together */
+_width: expression(this.parentNode.offsetWidth -
+parseInt("0px") -
+parseInt("240px") + 'px');
+}
+.main-inner .fauxcolumn-left-outer {
+width: 0px;
+}
+.main-inner .fauxcolumn-right-outer {
+width: 240px;
+}
+.main-inner .column-left-outer {
+width: 0px;
+right: 100%;
+margin-left: -0px;
+}
+.main-inner .column-right-outer {
+width: 240px;
+margin-right: -240px;
+}
+#layout {
+min-width: 0;
+}
+#layout .content-outer {
+min-width: 0;
+width: 800px;
+}
+#layout .region-inner {
+min-width: 0;
+width: auto;
+}
+--></style>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=12.0, minimum-scale=.25, user-scalable=yes" name="viewport">
+<meta content="mw8ww70r3jW0GzXY6j1d" name="follow_it-verification-code">
+<link href="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/authorization.css" media="all" onload="if(media!=&#39;all&#39;)media=&#39;all&#39;" rel="stylesheet"><noscript><link href='https://www.blogger.com/dyn-css/authorization.css?targetBlogID=6264947694886887540&amp;zx=fea6dd38-80ac-4fdc-b92f-8ffa65b2aac3' rel='stylesheet'/></noscript>
+<meta name="google-adsense-platform-account" content="ca-host-pub-1556223355139109">
+<meta name="google-adsense-platform-domain" content="blogspot.com">
+
+<script type="text/javascript" language="javascript">
+  // Supply ads personalization default for EEA readers
+  // See https://www.blogger.com/go/adspersonalization
+  adsbygoogle = window.adsbygoogle || [];
+  if (typeof adsbygoogle.requestNonPersonalizedAds === 'undefined') {
+    adsbygoogle.requestNonPersonalizedAds = 1;
+  }
+</script>
+
+
+</head>
+<body class="">
+<div class="navbar no-items section" id="navbar">
+</div>
+<div class="body-fauxcolumns">
+<div class="fauxcolumn-outer body-fauxcolumn-outer">
+<div class="cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left">
+<div class="fauxborder-right"></div>
+<div class="fauxcolumn-inner">
+</div>
+</div>
+<div class="cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+</div>
+<div class="content">
+<div class="content-fauxcolumns">
+<div class="fauxcolumn-outer content-fauxcolumn-outer">
+<div class="cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left">
+<div class="fauxborder-right"></div>
+<div class="fauxcolumn-inner">
+</div>
+</div>
+<div class="cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+</div>
+<div class="content-outer">
+<div class="content-cap-top cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left content-fauxborder-left">
+<div class="fauxborder-right content-fauxborder-right"></div>
+<div class="content-inner">
+<header>
+<div class="header-outer">
+<div class="header-cap-top cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left header-fauxborder-left">
+<div class="fauxborder-right header-fauxborder-right"></div>
+<div class="region-inner header-inner">
+<div class="header section" id="header"><div class="widget Header" data-version="1" id="Header1">
+<div id="header-inner" style="background-image: url(&quot;https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi-4KXwYe0lQ4HFzhAye9vvRlij2ZYvMbfPCnqEE__1o85Fjo3XgefxJQhWRdwR3EzNWNMWT3yMaj2QZaT9GazqQx3C6oWa3-hBNlRHG7f-Oib-lv1Wq_C2_A0rt8xZgs87iNqzRVKK7H0A/s800/background.jpg&quot;); background-position: left; width: 550px; min-height: 105px; _height: 105px; background-repeat: no-repeat; ">
+<div class="titlewrapper" style="background: transparent">
+<h1 class="title" style="background: transparent; border-width: 0px">
+<a href="https://www.righto.com/">
+Ken Shirriff's blog
+</a>
+</h1>
+</div>
+<div class="descriptionwrapper">
+<p class="description"><span>Computer history, restoring vintage computers, IC reverse engineering, and whatever</span></p>
+</div>
+</div>
+</div></div>
+</div>
+</div>
+<div class="header-cap-bottom cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+</header>
+<div class="tabs-outer">
+<div class="tabs-cap-top cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left tabs-fauxborder-left">
+<div class="fauxborder-right tabs-fauxborder-right"></div>
+<div class="region-inner tabs-inner">
+<div class="tabs no-items section" id="crosscol"></div>
+<div class="tabs no-items section" id="crosscol-overflow"></div>
+</div>
+</div>
+<div class="tabs-cap-bottom cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+<div class="main-outer">
+<div class="main-cap-top cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left main-fauxborder-left">
+<div class="fauxborder-right main-fauxborder-right"></div>
+<div class="region-inner main-inner">
+<div class="columns fauxcolumns">
+<div class="fauxcolumn-outer fauxcolumn-center-outer">
+<div class="cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left">
+<div class="fauxborder-right"></div>
+<div class="fauxcolumn-inner">
+</div>
+</div>
+<div class="cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+<div class="fauxcolumn-outer fauxcolumn-left-outer">
+<div class="cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left">
+<div class="fauxborder-right"></div>
+<div class="fauxcolumn-inner">
+</div>
+</div>
+<div class="cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+<div class="fauxcolumn-outer fauxcolumn-right-outer">
+<div class="cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left">
+<div class="fauxborder-right"></div>
+<div class="fauxcolumn-inner">
+</div>
+</div>
+<div class="cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+<!-- corrects IE6 width calculation -->
+<div class="columns-inner">
+<div class="column-center-outer">
+<div class="column-center-inner">
+<div class="main section" id="main"><div class="widget Blog" data-version="1" id="Blog1">
+<div class="blog-posts hfeed">
+
+          <div class="date-outer">
+        
+
+          <div class="date-posts">
+        
+<div class="post-outer">
+<div class="post hentry" itemprop="blogPost" itemscope="itemscope" itemtype="http://schema.org/BlogPosting">
+<meta content="https://static.righto.com/images/dx7-data/die-labeled-w600.jpg" itemprop="image_url">
+<meta content="6264947694886887540" itemprop="blogId">
+<meta content="7599448188873380170" itemprop="postId">
+<a name="7599448188873380170"></a>
+<h3 class="post-title entry-title" itemprop="name">
+Yamaha DX7 chip reverse-engineering, part 6: the control registers
+</h3>
+<div class="post-header">
+<div class="post-header-line-1"></div>
+</div>
+<div class="post-body entry-content" id="post-body-7599448188873380170" itemprop="description articleBody">
+<style>
+  .hilite {cursor:zoom-in}
+  a:link img.hilite, a:visited img.hilite { color: #fff;}
+</style>
+
+<p>The Yamaha DX7 digital synthesizer (1983) was the classic synthesizer in 1980s pop music.
+It uses a technique called FM synthesis to
+produce complex, harmonically-rich sounds.
+In this blog post, I look inside its custom "OPS" sound chip and explain the control registers for this chip.
+By reverse-engineering the circuitry, I found a few undocumented test functions.
+(This post covers some fairly obscure details of the DX7; you might prefer my previous DX7 posts<span id="fnref:previous"><a class="ref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fn:previous">1</a></span>
+starting with "<a href="https://www.righto.com/2021/11/reverse-engineering-yamaha-dx7.html">DX7 reverse-engineering</a>".)</p>
+<p><a href="https://static.righto.com/images/dx7-data/die-labeled.jpg"><img alt="Die photo of the YM21280 chip with the main functional blocks labeled. Click this photo (or any other) for a larger version." class="hilite" height="523" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/die-labeled-w600.jpg" title="Die photo of the YM21280 chip with the main functional blocks labeled. Click this photo (or any other) for a larger version." width="600"></a></p><div class="cite">Die photo of the YM21280 chip with the main functional blocks labeled. Click this photo (or any other) for a larger version.</div><p></p>
+<p>The die photo above shows the DX7's OPS sound synthesis chip under the microscope, showing its complex silicon circuitry.
+Unlike modern chips, this chip has just one layer of metal, visible as the whitish lines on top.
+Around the edges, you can see the 64 bond wires attached to pads; these connect the silicon die to the chip's 64 pins.
+In this blog post, I'm focusing on the control registers, highlighted in red.
+I'll outline the other functional blocks briefly.
+Each of the 96 oscillators has a phase accumulator used to generate the frequency.
+The sine and exponential functions are implemented with lookup tables in ROMs.
+Other functional blocks apply the envelope, hold configuration data, and buffer the output values.</p>
+<p><a href="https://static.righto.com/images/dx7-data/dx7.jpg"><img alt="The DX7 synthesizer. Photo by rockheim (CC BY-NC-SA 2.0)." class="hilite" height="108" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/dx7-w600.jpg" title="The DX7 synthesizer. Photo by rockheim (CC BY-NC-SA 2.0)." width="600"></a></p><div class="cite">The DX7 synthesizer. Photo by <a href="https://www.flickr.com/photos/27485954@N07/4944274871/">rockheim</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/2.0/">CC BY-NC-SA 2.0</a>).</div><p></p>
+<p>The DX7 generates sounds digitally using a technique called FM synthesis.
+Each note has six oscillators (called "operators") that can be combined in different ways (called "algorithms").
+An algorithm is represented by a diagram (below), where an oscillator modulates the oscillator below, as shown by the lines.
+For instance, in algorithm 1 below, oscillator 6 modulates oscillator 5 which modulates 4 which modulates 3.
+Oscillator 2 modulates oscillator 1. The output is taken from the bottom oscillators (1 and 3).
+Meanwhile, oscillator 6 modulates itself, controlled by a user-selectable feedback level.
+With 32 different algorithms, the DX7 can generate a wide variety of sounds.
+In the DX7 synthesizer, all 16 notes must use the same algorithm.
+But from my reverse-engineering, it appears that the chip supports different algorithms for each note, even though
+the synthesizer doesn't make use of this.</p>
+<p><a href="https://static.righto.com/images/dx7-data/algorithms.png"><img alt="Four of the 32 &quot;algorithms&quot; that can be selected on the DX7." class="hilite" height="157" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/algorithms-w400.png" title="Four of the 32 &quot;algorithms&quot; that can be selected on the DX7." width="400"></a></p><div class="cite">Four of the 32 "algorithms" that can be selected on the DX7.</div><p></p>
+<p>To the programmer of the DX7 firmware, the sound chip appears to have two write-only registers that control the chip.
+The diagram below shows the layout of the chip's s two registers, as described by Anthony Richardson.
+The desired algorithm and feedback are written to address 1.<span id="fnref:rom"><a class="ref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fn:rom">2</a></span>
+Address 0 has bits to turn the "key sync" feature<span id="fnref:sync"><a class="ref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fn:sync">3</a></span> on and off.
+As for the Mute and Test Register Select bits, my investigation provides some explanation.</p>
+<pre>Address | Bit 7 | Bit 6          | Bit 5        | Bit 4 | Bit 3 | Bit 2 | Bit 1 | Bit 0 |
+0       | Mute  | Clear Key Sync | Set Key Sync | Test Register Select                  |
+1       | Algorithm Select (0..31)                              | Feedback Level (0..7) |
+</pre>
+
+<p>(The functionality above is pretty limited, so you might wonder how the synthesizer controls which notes are played.
+Most of the synthesizer functions are controlled through 
+a second custom chip, the envelope generator chip (EGS).
+Note and envelope data is written to registers in the EGS chip, which 
+then sends frequency and amplitude data to the sound chip over a special bus.)</p>
+<p>The diagram below shows the main components of the register circuitry.
+The large block at the bottom is the A-register, which holds the algorithm/feedback entries, as 16 8-bit values.<span id="fnref:aregister"><a class="ref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fn:aregister">4</a></span>
+The most puzzling feature of the A-register is its size; it holds 16 entries, one for each note, 
+but the DX7 uses the same algorithm/feedback setting for all 16 notes.
+The second puzzling feature is that although the chip appears to have two 8-bit registers, the implementation is
+one 9-bit register, and one 5-bit register. Moreover, the 5-bit register can only be modified by writing through the 9-bit register.</p>
+<p><a href="https://static.righto.com/images/dx7-data/blocks-labeled.jpg"><img alt="Main functional blocks of the register circuitry." class="hilite" height="543" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/blocks-labeled-w400.jpg" title="Main functional blocks of the register circuitry." width="400"></a></p><div class="cite">Main functional blocks of the register circuitry.</div><p></p>
+<p>The chip has one address pin (called "DS") which selects between the two registers.
+When a byte is written to the chip, to either address, the 8 bits along with DS (the address bit) are stored in the 9-bit latches.
+If DS is 0 (i.e. write to the control address 0), the bits are decoded to perform any special functions, and the lower 5 bits are loaded into the
+5-bit register on the right.
+If DS is 1 (i.e. write to the algorithm/feedback address 1), the 8-bit algorithm/feedback value is stored into the A register, in a location controlled by the 5-bit register.</p>
+<h2>Updating the algorithm/feedback</h2>
+<p>The algorithm/feedback A-register register holds data for 16 notes.
+It can be updated in two ways. The first way, used by the DX7, updates all entries with the same value.
+The second way updates a single entry, allowing different notes to have different algorithms.
+Both cases involve a write to address 0, followed by writing the algorithm/feedback byte to address 1.</p>
+<p>To update all entries, address 0 must be written with a value with the bit pattern <code>0??1?0??</code> (where ? indicates a "don't care" bit that can be 0 or 1).<span id="fnref:pattern"><a class="ref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fn:pattern">5</a></span>
+This pattern triggers a circuit that constantly loads the value in the data latch into the storage register.</p>
+<p>The DX7's CPU controls the OPS chip in this way. Specifically,
+an update of the algorithm and feedback is performed by writing either 0x30 (if sync is on) or 0x50 (if sync is off) to address 0, and then writing the algorithm/feedback byte to address 1.<span id="fnref2:rom"><a class="ref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fn:rom">2</a></span></p>
+<p>The second update path will change the algorithm and feedback for a single note.
+(The DX7 does not use this feature.)
+is triggered by writing the bit pattern <code>0??0nnnn</code>, where <em>nnnn</em> specifies one of the 16 notes.</p>
+<p>The implementation of this is a bit tricky because the chip uses shift registers for storage, not RAM.
+The A-register consists of 8 shift registers (one for each bit), each with 16 stages (one for each note).
+An entry can only be updated when it is shifted out the end of the shift register, and a new value can be inserted.
+(This is unlike RAM, where an arbitrary entry can be written.)
+To update an entry in the shift register, a 4-bit comparator circuit (below) compares the number of the current note with the number of the desired note in the control register.
+When there is a match, the new value is written to the shift register.</p>
+<p><a href="https://static.righto.com/images/dx7-data/comparator.jpg"><img alt="The 4-bit comparator determines when the shift register is at the desired note position. It is built from four exclusive-NOR gates." class="hilite" height="302" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/comparator-w200.jpg" title="The 4-bit comparator determines when the shift register is at the desired note position. It is built from four exclusive-NOR gates." width="200"></a></p><div class="cite">The 4-bit comparator determines when the shift register is at the desired note position. It is built from four exclusive-NOR gates.</div><p></p>
+<h2>Special command sequences</h2>
+<p>The logic circuitry recognizes several bit patterns when they are written to address 0,
+and causes special actions when they are detected.
+These are not used by the DX7; I think they were used for testing the chip during manufacturing to make tests more predictable
+and faster.</p>
+<p><code>1???????</code>: Setting the top bit triggers several special actions. Earlier analysis has labeled this bit as "Mute", but I suspect
+it is more of a "Test Reset" function, 
+resetting the chip to a known state so tests will be predictable.
+This bit clears the phase accumulators.
+This bit disables the scale factors, so the output data is unshifted.
+It also bypasses the output latch, which may output digital note data at a higher rate.</p>
+<p><code>1??????1</code>: In addition to the previous action, this pattern resets the counters that count through the operators and notes,
+controlling the actions of the chip.
+This is probably used start testing the chip from a known state, so the outputs can be compared with expected values.</p>
+<p><code>1?????1?</code>: This causes the low-order bits of the phase register to generate the waveform, rather than the high-order bits.
+I think this is used for testing so the low-order bits can be examined more directly to find flaws.
+It also will increase the frequencies by a factor of 1024, which may help run through waveforms faster for testing.</p>
+<h2>Conclusion</h2>
+<p>By looking inside the chip and reverse-engineering the silicon circuits, I learned some details about the internal registers.
+One interesting discovery is that the chip appears to support separate algorithms for each voice, even though the synthesizer
+doesn't use this feature. I also uncovered some test functionality.</p>
+<p><a href="https://static.righto.com/images/dx7-data/package-opened.jpg"><img alt="The Yamaha YM21280 OPS integrated circuit package with the metal lid removed, revealing the silicon die." class="hilite" height="227" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/package-opened-w350.jpg" title="The Yamaha YM21280 OPS integrated circuit package with the metal lid removed, revealing the silicon die." width="350"></a></p><div class="cite">The Yamaha YM21280 OPS integrated circuit package with the metal lid removed, revealing the silicon die.</div><p></p>
+<p>I plan to continue investigating the DX7's circuitry,
+so follow me on Twitter <a href="https://twitter.com/kenshirriff">@kenshirriff</a> for updates. I also have an <a href="https://www.righto.com/feeds/posts/default">RSS feed</a>.
+Thanks to Jacques Mattheij and Anthony Richardson for providing the chip and discussion.<span id="fnref:refs"><a class="ref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fn:refs">6</a></span></p>
+<p>Disclaimer: I figured out the behavior described in this post studying the die. It hasn't been tested on
+an actual DX7 so I don't guarantee that it is correct.</p>
+<h2>Notes and references</h2>
+<div class="footnote">
+<ol>
+<li id="fn:previous">
+<p>My previous posts on the DX7:
+<a href="https://www.righto.com/2021/11/reverse-engineering-yamaha-dx7.html">DX7 reverse-engineering</a>,
+<a href="https://www.righto.com/2021/11/reverse-engineering-yamaha-dx7_28.html">The exponential ROM</a>,
+<a href="https://www.righto.com/2021/12/yamaha-dx7-reverse-engineering-part-iii.html">The log-sine ROM</a>, 
+<a href="https://www.righto.com/2021/12/yamaha-dx7-chip-reverse-engineering.html">How algorithms are implemented</a>, and
+<a href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering.html">The output circuitry</a>.&nbsp;<a class="footnote-backref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fnref:previous" title="Jump back to footnote 1 in the text">↩</a></p>
+</li>
+<li id="fn:rom">
+<p>Looking at the ROM shows how the synthesizer's CPU communicates with the OPS chip.
+Since the DX7 ROM code has been disassembled, you can view the code that writes to the sound chip <a href="https://github.com/ajxs/yamaha_dx7_rom_disassembly/blob/30219963f46225b200569dfa3d286a8446d4af56/yamaha_dx7_rom_v1.8.asm#L10048">here</a>.&nbsp;<a class="footnote-backref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fnref:rom" title="Jump back to footnote 2 in the text">↩</a><a class="footnote-backref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fnref2:rom" title="Jump back to footnote 2 in the text">↩</a></p>
+</li>
+<li id="fn:sync">
+<p>Oscillator Key Sync is a feature of the DX7.
+According to the <a href="https://homepages.abdn.ac.uk/d.j.benson/pages/dx7/manuals/dx7-man.pdf">manual</a>,
+Operator Key Sync "enables you to set the operator so its 'oscillator' begins at the start of the sine wave cycle each time you
+play a note. When Oscillator Key Sync is off, the sine wave continues so that subtle differences will occur even when you play
+the note repeatedly."&nbsp;<a class="footnote-backref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fnref:sync" title="Jump back to footnote 3 in the text">↩</a></p>
+</li>
+<li id="fn:aregister">
+<p>The <a href="https://archive.org/details/synthmanual-yamaha-dx-7-and-dx-9-service-manual/page/n12/mode/1up">DX7/9 Service Manual</a>
+   shows the "A-register" holding the algorithm and feedback level, so I'll use that name.&nbsp;<a class="footnote-backref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fnref:aregister" title="Jump back to footnote 4 in the text">↩</a></p>
+</li>
+<li id="fn:pattern">
+<p>The bit pattern <code>0??1?0??</code> looks a bit random.
+I don't know why this pattern was chosen. The first two bits can be explained, but I don't see a purpose for the last 0 bit.&nbsp;<a class="footnote-backref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fnref:pattern" title="Jump back to footnote 5 in the text">↩</a></p>
+</li>
+<li id="fn:refs">
+<p>For more information on the DX7 internals, see
+<a href="https://ajxs.me/blog/Yamaha_DX7_Technical_Analysis.html">DX7 Technical Analysis</a>,
+<a href="https://github.com/google/music-synthesizer-for-android/blob/master/wiki/Dx7Hardware.wiki">DX7 Hardware</a>,
+<a href="https://docs.google.com/a/google.com/Doc?id=dd8kqn9f_13cqjkf4gp">OPLx decapsulated</a>,
+and the video <a href="https://www.youtube.com/watch?v=XJ97iXQrqzw">Emulating the DX7 the hard way</a>.&nbsp;<a class="footnote-backref" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html#fnref:refs" title="Jump back to footnote 6 in the text">↩</a></p>
+</li>
+</ol>
+</div>
+<div style="clear: both;"></div>
+</div>
+<div class="post-footer">
+<div class="post-footer-line post-footer-line-1"><span class="post-comment-link">
+</span>
+<span class="post-icons">
+<span class="item-action">
+<a href="https://www.blogger.com/email-post/6264947694886887540/7599448188873380170" title="Email Post">
+<img alt="" class="icon-action" height="13" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/icon18_email.gif" width="18">
+</a>
+</span>
+<span class="item-control blog-admin pid-1138732533">
+<a href="https://www.blogger.com/post-edit.g?blogID=6264947694886887540&amp;postID=7599448188873380170&amp;from=pencil" title="Edit Post">
+<img alt="" class="icon-action" height="18" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/icon18_edit_allbkg.gif" width="18">
+</a>
+</span>
+</span>
+<span class="post-backlinks post-comment-link">
+</span>
+<div class="post-share-buttons goog-inline-block">
+<a class="goog-inline-block share-button sb-email" href="https://www.blogger.com/share-post.g?blogID=6264947694886887540&amp;postID=7599448188873380170&amp;target=email" target="_blank" title="Email This"><span class="share-button-link-text">Email This</span></a><a class="goog-inline-block share-button sb-blog" href="https://www.blogger.com/share-post.g?blogID=6264947694886887540&amp;postID=7599448188873380170&amp;target=blog" onclick="window.open(this.href, &quot;_blank&quot;, &quot;height=270,width=475&quot;); return false;" target="_blank" title="BlogThis!"><span class="share-button-link-text">BlogThis!</span></a><a class="goog-inline-block share-button sb-twitter" href="https://www.blogger.com/share-post.g?blogID=6264947694886887540&amp;postID=7599448188873380170&amp;target=twitter" target="_blank" title="Share to X"><span class="share-button-link-text">Share to X</span></a><a class="goog-inline-block share-button sb-facebook" href="https://www.blogger.com/share-post.g?blogID=6264947694886887540&amp;postID=7599448188873380170&amp;target=facebook" onclick="window.open(this.href, &quot;_blank&quot;, &quot;height=430,width=640&quot;); return false;" target="_blank" title="Share to Facebook"><span class="share-button-link-text">Share to Facebook</span></a><a class="goog-inline-block share-button sb-pinterest" href="https://www.blogger.com/share-post.g?blogID=6264947694886887540&amp;postID=7599448188873380170&amp;target=pinterest" target="_blank" title="Share to Pinterest"><span class="share-button-link-text">Share to Pinterest</span></a>
+</div>
+</div>
+<div class="post-footer-line post-footer-line-2"><span class="post-labels">
+Labels:
+<a href="https://www.righto.com/search/label/chips" rel="tag">chips</a>,
+<a href="https://www.righto.com/search/label/dx7" rel="tag">dx7</a>,
+<a href="https://www.righto.com/search/label/reverse-engineering" rel="tag">reverse-engineering</a>,
+<a href="https://www.righto.com/search/label/synth" rel="tag">synth</a>
+</span>
+</div>
+<div class="post-footer-line post-footer-line-3"></div>
+</div>
+</div>
+<div class="comments" id="comments">
+<a name="comments"></a>
+<h4>1 comment:</h4>
+<div id="Blog1_comments-block-wrapper">
+<dl class="avatar-comment-indent" id="comments-block">
+<dt class="comment-author " id="c5123486664633049547">
+<a name="c5123486664633049547"></a>
+<div class="avatar-image-container avatar-stock"><span dir="ltr"><img src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/blank.gif" width="35" height="35" alt="" title="EvilDragon">
+
+</span></div>
+EvilDragon
+said...
+</dt>
+<dd class="comment-body" id="Blog1_cmt-5123486664633049547">
+<p>
+Sorry if I missed in all the posts... but did you figure out what the mystery ROM was all about? Thanks!
+</p>
+</dd>
+<dd class="comment-footer">
+<span class="comment-timestamp">
+<a href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html?showComment=1691509429838#c5123486664633049547" title="comment permalink">
+August 8, 2023 at 8:43 AM
+</a>
+<span class="item-control blog-admin pid-559808058">
+<a class="comment-delete" href="https://www.blogger.com/comment/delete/6264947694886887540/5123486664633049547" title="Delete Comment">
+<img src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/icon_delete13.gif">
+</a>
+</span>
+</span>
+</dd>
+</dl>
+</div>
+<p class="comment-footer">
+<a href="https://www.blogger.com/comment/fullpage/post/6264947694886887540/7599448188873380170" onclick="">Post a Comment</a>
+</p>
+</div>
+</div>
+
+        </div></div>
+      
+</div>
+<div class="blog-pager" id="blog-pager">
+<span id="blog-pager-newer-link">
+<a class="blog-pager-newer-link" href="https://www.righto.com/2022/02/a-look-inside-chips-that-powered.html" id="Blog1_blog-pager-newer-link" title="Newer Post">Newer Post</a>
+</span>
+<span id="blog-pager-older-link">
+<a class="blog-pager-older-link" href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering.html" id="Blog1_blog-pager-older-link" title="Older Post">Older Post</a>
+</span>
+<a class="home-link" href="https://www.righto.com/">Home</a>
+</div>
+<div class="clear"></div>
+</div></div>
+</div>
+</div>
+<div class="column-left-outer">
+<div class="column-left-inner">
+<aside>
+</aside>
+</div>
+</div>
+<div class="column-right-outer">
+<div class="column-right-inner">
+<aside>
+<div class="sidebar section" id="sidebar-right-1"><div class="widget HTML" data-version="1" id="HTML3">
+<div class="widget-content">
+<a href="https://righto.kit.com/20bf534dff"><button>Subscribe</button></a>
+<p>
+<a href="https://www.righto.com/p/index.html">Contact info and site index</a></p>
+</div>
+<div class="clear"></div>
+</div><div class="widget PopularPosts" data-version="1" id="PopularPosts1">
+<h2>Popular Posts</h2>
+<div class="widget-content popular-posts">
+<ul>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2026/06/intel-8087-adder-reverse-engineered.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed.jpg">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2026/06/intel-8087-adder-reverse-engineered.html">The adder at the heart of Intel's 8087 floating-point chip</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2012/02/apple-didnt-revolutionize-power.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed.png">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2012/02/apple-didnt-revolutionize-power.html">Apple didn't revolutionize power supplies; new transistors did</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2026/06/space-shuttle-io-processor-boards.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed(1).jpg">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2026/06/space-shuttle-io-processor-boards.html">Examining circuit boards from the Space Shuttle's I/O Processor</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2026/06/ibm-604-thyraton-tube-module.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed(2).jpg">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2026/06/ibm-604-thyraton-tube-module.html">Powering up a module from the IBM 604: an electronic calculator from 1948</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2009/08/multi-protocol-infrared-remote-library.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed(3).jpg">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2009/08/multi-protocol-infrared-remote-library.html">A Multi-Protocol Infrared Remote Library for the Arduino</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2012/10/a-dozen-usb-chargers-in-lab-apple-is.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed(4).png">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2012/10/a-dozen-usb-chargers-in-lab-apple-is.html">A dozen USB chargers in the lab: Apple is very good, but not quite the best</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2012/05/apple-iphone-charger-teardown-quality.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed(5).png">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2012/05/apple-iphone-charger-teardown-quality.html">Apple iPhone charger teardown: quality in a tiny expensive package</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+<li>
+<div class="item-thumbnail-only">
+<div class="item-thumbnail">
+<a href="https://www.righto.com/2020/05/die-analysis-of-8087-math-coprocessors.html" target="_blank">
+<img alt="" border="0" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/unnamed(6).jpg">
+</a>
+</div>
+<div class="item-title"><a href="https://www.righto.com/2020/05/die-analysis-of-8087-math-coprocessors.html">Die analysis of the 8087 math coprocessor's fast bit shifter</a></div>
+</div>
+<div style="clear: both;"></div>
+</li>
+</ul>
+<div class="clear"></div>
+</div>
+</div><div class="widget BlogSearch" data-version="1" id="BlogSearch1">
+<h2 class="title">Search This Blog</h2>
+<div class="widget-content">
+<div id="BlogSearch1_form">
+<form action="https://www.righto.com/search" class="gsc-search-box" target="_top">
+<table cellpadding="0" cellspacing="0" class="gsc-search-box">
+<tbody>
+<tr>
+<td class="gsc-input">
+<input autocomplete="off" class="gsc-input" name="q" size="10" title="search" type="text" value="">
+</td>
+<td class="gsc-search-button">
+<input class="gsc-search-button" title="search" type="submit" value="Search">
+</td>
+</tr>
+</tbody>
+</table>
+</form>
+</div>
+</div>
+<div class="clear"></div>
+</div><div class="widget Label" data-version="1" id="Label1">
+<h2>Labels</h2>
+<div class="widget-content cloud-label-widget-content">
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/386">386</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/6502">6502</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/8008">8008</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/8085">8085</a>
+</span>
+<span class="label-size label-size-4">
+<a dir="ltr" href="https://www.righto.com/search/label/8086">8086</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/8087">8087</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/8088">8088</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/aerospace">aerospace</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/alto">alto</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/analog">analog</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/Apollo">Apollo</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/apple">apple</a>
+</span>
+<span class="label-size label-size-4">
+<a dir="ltr" href="https://www.righto.com/search/label/arc">arc</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/arduino">arduino</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/arm">arm</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/beaglebone">beaglebone</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/bitcoin">bitcoin</a>
+</span>
+<span class="label-size label-size-1">
+<a dir="ltr" href="https://www.righto.com/search/label/c%23">c#</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/cadc">cadc</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/calculator">calculator</a>
+</span>
+<span class="label-size label-size-4">
+<a dir="ltr" href="https://www.righto.com/search/label/chips">chips</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/css">css</a>
+</span>
+<span class="label-size label-size-1">
+<a dir="ltr" href="https://www.righto.com/search/label/datapoint">datapoint</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/dx7">dx7</a>
+</span>
+<span class="label-size label-size-5">
+<a dir="ltr" href="https://www.righto.com/search/label/electronics">electronics</a>
+</span>
+<span class="label-size label-size-1">
+<a dir="ltr" href="https://www.righto.com/search/label/f%23">f#</a>
+</span>
+<span class="label-size label-size-1">
+<a dir="ltr" href="https://www.righto.com/search/label/fairchild">fairchild</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/fpga">fpga</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/fractals">fractals</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/genome">genome</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/globus">globus</a>
+</span>
+<span class="label-size label-size-1">
+<a dir="ltr" href="https://www.righto.com/search/label/haskell">haskell</a>
+</span>
+<span class="label-size label-size-1">
+<a dir="ltr" href="https://www.righto.com/search/label/HP">HP</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/html5">html5</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/ibm">ibm</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/ibm1401">ibm1401</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/ibm360">ibm360</a>
+</span>
+<span class="label-size label-size-4">
+<a dir="ltr" href="https://www.righto.com/search/label/intel">intel</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/ipv6">ipv6</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/ir">ir</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/java">java</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/javascript">javascript</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/math">math</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/microcode">microcode</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/oscilloscope">oscilloscope</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/Pentium">Pentium</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/photo">photo</a>
+</span>
+<span class="label-size label-size-4">
+<a dir="ltr" href="https://www.righto.com/search/label/power%20supply">power supply</a>
+</span>
+<span class="label-size label-size-4">
+<a dir="ltr" href="https://www.righto.com/search/label/random">random</a>
+</span>
+<span class="label-size label-size-5">
+<a dir="ltr" href="https://www.righto.com/search/label/reverse-engineering">reverse-engineering</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/sheevaplug">sheevaplug</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/snark">snark</a>
+</span>
+<span class="label-size label-size-3">
+<a dir="ltr" href="https://www.righto.com/search/label/space">space</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/spanish">spanish</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/synth">synth</a>
+</span>
+<span class="label-size label-size-4">
+<a dir="ltr" href="https://www.righto.com/search/label/teardown">teardown</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/theory">theory</a>
+</span>
+<span class="label-size label-size-1">
+<a dir="ltr" href="https://www.righto.com/search/label/unicode">unicode</a>
+</span>
+<span class="label-size label-size-2">
+<a dir="ltr" href="https://www.righto.com/search/label/Z-80">Z-80</a>
+</span>
+<div class="clear"></div>
+</div>
+</div><div class="widget BlogArchive" data-version="1" id="BlogArchive1">
+<h2>Blog Archive</h2>
+<div class="widget-content">
+<div id="ArchiveList">
+<div id="BlogArchive1_ArchiveList">
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2026/">
+2026
+</a>
+<span class="post-count" dir="ltr">(9)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2026/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2026/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2026/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2026/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2026/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2026/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/">
+2025
+</a>
+<span class="post-count" dir="ltr">(22)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2025/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/">
+2024
+</a>
+<span class="post-count" dir="ltr">(21)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2024/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/">
+2023
+</a>
+<span class="post-count" dir="ltr">(35)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2023/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(8)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate expanded">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy toggle-open">
+
+        ▼&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/">
+2022
+</a>
+<span class="post-count" dir="ltr">(18)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate expanded">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy toggle-open">
+
+        ▼&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+<ul class="posts">
+<li><a href="https://www.righto.com/2022/02/a-look-inside-chips-that-powered.html">A look inside the chips that powered the landmark ...</a></li>
+<li><a href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html">Yamaha DX7 chip reverse-engineering, part 6: the c...</a></li>
+<li><a href="https://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering.html">Yamaha DX7 chip reverse-engineering, part V: the o...</a></li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2022/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/">
+2021
+</a>
+<span class="post-count" dir="ltr">(26)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2021/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/">
+2020
+</a>
+<span class="post-count" dir="ltr">(33)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2020/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/">
+2019
+</a>
+<span class="post-count" dir="ltr">(18)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2019/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/">
+2018
+</a>
+<span class="post-count" dir="ltr">(17)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2018/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/">
+2017
+</a>
+<span class="post-count" dir="ltr">(21)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2017/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/">
+2016
+</a>
+<span class="post-count" dir="ltr">(34)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(8)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2016/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/">
+2015
+</a>
+<span class="post-count" dir="ltr">(12)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2015/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2014/">
+2014
+</a>
+<span class="post-count" dir="ltr">(13)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2014/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2014/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2014/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2014/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2014/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2014/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/">
+2013
+</a>
+<span class="post-count" dir="ltr">(24)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2013/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2012/">
+2012
+</a>
+<span class="post-count" dir="ltr">(10)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2012/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2012/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2012/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2012/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2012/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2012/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2011/">
+2011
+</a>
+<span class="post-count" dir="ltr">(11)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2011/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2011/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2011/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2011/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2011/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2011/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/">
+2010
+</a>
+<span class="post-count" dir="ltr">(22)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/10/">
+October
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2010/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/">
+2009
+</a>
+<span class="post-count" dir="ltr">(22)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/12/">
+December
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/11/">
+November
+</a>
+<span class="post-count" dir="ltr">(5)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/09/">
+September
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/08/">
+August
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(2)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2009/01/">
+January
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2008/">
+2008
+</a>
+<span class="post-count" dir="ltr">(27)</span>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2008/07/">
+July
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2008/06/">
+June
+</a>
+<span class="post-count" dir="ltr">(1)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2008/05/">
+May
+</a>
+<span class="post-count" dir="ltr">(3)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2008/04/">
+April
+</a>
+<span class="post-count" dir="ltr">(4)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2008/03/">
+March
+</a>
+<span class="post-count" dir="ltr">(10)</span>
+</li>
+</ul>
+<ul class="hierarchy">
+<li class="archivedate collapsed">
+<a class="toggle" href="javascript:void(0)">
+<span class="zippy">
+
+        ►&nbsp;
+      
+</span>
+</a>
+<a class="post-count-link" href="https://www.righto.com/2008/02/">
+February
+</a>
+<span class="post-count" dir="ltr">(6)</span>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="clear"></div>
+</div>
+</div></div>
+</aside>
+</div>
+</div>
+</div>
+<div style="clear: both"></div>
+<!-- columns -->
+</div>
+<!-- main -->
+</div>
+</div>
+<div class="main-cap-bottom cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+<footer>
+<div class="footer-outer">
+<div class="footer-cap-top cap-top">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+<div class="fauxborder-left footer-fauxborder-left">
+<div class="fauxborder-right footer-fauxborder-right"></div>
+<div class="region-inner footer-inner">
+<div class="foot section" id="footer-1"><div class="widget HTML" data-version="1" id="HTML1">
+<div class="widget-content">
+<script src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/ck.5.js"></script>
+      <form action="https://app.kit.com/forms/8589382/subscriptions" class="seva-form formkit-form" method="post" data-sv-form="8589382" data-uid="cad50ea429" data-format="inline" data-version="5" data-options="{&quot;settings&quot;:{&quot;after_subscribe&quot;:{&quot;action&quot;:&quot;message&quot;,&quot;success_message&quot;:&quot;Thanks for subscribing! Now check your email to confirm your subscription.&quot;,&quot;redirect_url&quot;:&quot;&quot;},&quot;analytics&quot;:{&quot;google&quot;:null,&quot;fathom&quot;:null,&quot;facebook&quot;:null,&quot;segment&quot;:null,&quot;pinterest&quot;:null,&quot;sparkloop&quot;:null,&quot;googletagmanager&quot;:null},&quot;modal&quot;:{&quot;trigger&quot;:&quot;timer&quot;,&quot;scroll_percentage&quot;:null,&quot;timer&quot;:5,&quot;devices&quot;:&quot;all&quot;,&quot;show_once_every&quot;:15},&quot;powered_by&quot;:{&quot;show&quot;:true,&quot;url&quot;:&quot;https://kit.com/features/forms?utm_campaign=poweredby&amp;utm_content=form&amp;utm_medium=referral&amp;utm_source=dynamic&quot;},&quot;recaptcha&quot;:{&quot;enabled&quot;:false},&quot;return_visitor&quot;:{&quot;action&quot;:&quot;show&quot;,&quot;custom_content&quot;:&quot;&quot;},&quot;slide_in&quot;:{&quot;display_in&quot;:&quot;bottom_right&quot;,&quot;trigger&quot;:&quot;timer&quot;,&quot;scroll_percentage&quot;:null,&quot;timer&quot;:5,&quot;devices&quot;:&quot;all&quot;,&quot;show_once_every&quot;:15},&quot;sticky_bar&quot;:{&quot;display_in&quot;:&quot;top&quot;,&quot;trigger&quot;:&quot;timer&quot;,&quot;scroll_percentage&quot;:null,&quot;timer&quot;:5,&quot;devices&quot;:&quot;all&quot;,&quot;show_once_every&quot;:15}},&quot;version&quot;:&quot;5&quot;}" min-width="400 500 600 700" style="background-color: rgb(249, 250, 251); border-radius: 4px;"><div class="formkit-background" style="opacity: 0.2;"></div><div data-style="minimal"><div class="formkit-header" data-element="header" style="color: rgb(77, 77, 77); font-size: 27px; font-weight: 700;"><h2>Don't miss a post!</h2></div><div class="formkit-subheader" data-element="subheader" style="color: rgb(104, 104, 104); font-size: 18px;"><p>Subscribe to get updates by email.</p></div><ul class="formkit-alert formkit-alert-error" data-element="errors" data-group="alert"></ul><div data-element="fields" data-stacked="false" class="seva-fields formkit-fields"><div class="formkit-field"><input class="formkit-input" name="email_address" aria-label="Email Address" placeholder="Email Address" required="" type="email" style="color: rgb(0, 0, 0); border-color: rgb(227, 227, 227); border-radius: 4px; font-weight: 400;"></div><button data-element="submit" class="formkit-submit formkit-submit" style="color: rgb(255, 255, 255); background-color: rgb(22, 158, 190); border-radius: 4px; font-weight: 400;"><div class="formkit-spinner"><div></div><div></div><div></div></div><span class="">Subscribe</span></button></div><div class="formkit-guarantee" data-element="guarantee" style="color: rgb(77, 77, 77); font-size: 13px; font-weight: 400;"><p>​</p></div><div class="formkit-powered-by-convertkit-container"><a href="https://kit.com/features/forms?utm_campaign=poweredby&amp;utm_content=form&amp;utm_medium=referral&amp;utm_source=dynamic" data-element="powered-by" class="formkit-powered-by-convertkit" data-variant="dark" target="_blank" rel="nofollow">Built with Kit</a></div></div><style>.formkit-form[data-uid="cad50ea429"] *{box-sizing:border-box;}.formkit-form[data-uid="cad50ea429"]{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}.formkit-form[data-uid="cad50ea429"] legend{border:none;font-size:inherit;margin-bottom:10px;padding:0;position:relative;display:table;}.formkit-form[data-uid="cad50ea429"] fieldset{border:0;padding:0.01em 0 0 0;margin:0;min-width:0;}.formkit-form[data-uid="cad50ea429"] body:not(:-moz-handler-blocked) fieldset{display:table-cell;}.formkit-form[data-uid="cad50ea429"] h1,.formkit-form[data-uid="cad50ea429"] h2,.formkit-form[data-uid="cad50ea429"] h3,.formkit-form[data-uid="cad50ea429"] h4,.formkit-form[data-uid="cad50ea429"] h5,.formkit-form[data-uid="cad50ea429"] h6{color:inherit;font-size:inherit;font-weight:inherit;}.formkit-form[data-uid="cad50ea429"] h2{font-size:1.5em;margin:1em 0;}.formkit-form[data-uid="cad50ea429"] h3{font-size:1.17em;margin:1em 0;}.formkit-form[data-uid="cad50ea429"] p{color:inherit;font-size:inherit;font-weight:inherit;}.formkit-form[data-uid="cad50ea429"] ol:not([template-default]),.formkit-form[data-uid="cad50ea429"] ul:not([template-default]),.formkit-form[data-uid="cad50ea429"] blockquote:not([template-default]){text-align:left;}.formkit-form[data-uid="cad50ea429"] p:not([template-default]),.formkit-form[data-uid="cad50ea429"] hr:not([template-default]),.formkit-form[data-uid="cad50ea429"] blockquote:not([template-default]),.formkit-form[data-uid="cad50ea429"] ol:not([template-default]),.formkit-form[data-uid="cad50ea429"] ul:not([template-default]){color:inherit;font-style:initial;}.formkit-form[data-uid="cad50ea429"] .ordered-list,.formkit-form[data-uid="cad50ea429"] .unordered-list{list-style-position:outside !important;padding-left:1em;}.formkit-form[data-uid="cad50ea429"] .list-item{padding-left:0;}.formkit-form[data-uid="cad50ea429"][data-format="modal"]{display:none;}.formkit-form[data-uid="cad50ea429"][data-format="slide in"]{display:none;}.formkit-form[data-uid="cad50ea429"][data-format="sticky bar"]{display:none;}.formkit-sticky-bar .formkit-form[data-uid="cad50ea429"][data-format="sticky bar"]{display:block;}.formkit-form[data-uid="cad50ea429"] .formkit-input,.formkit-form[data-uid="cad50ea429"] .formkit-select,.formkit-form[data-uid="cad50ea429"] .formkit-checkboxes{width:100%;}.formkit-form[data-uid="cad50ea429"] .formkit-button,.formkit-form[data-uid="cad50ea429"] .formkit-submit{border:0;border-radius:5px;color:#ffffff;cursor:pointer;display:inline-block;text-align:center;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:15px;overflow:hidden;padding:0;position:relative;vertical-align:middle;}.formkit-form[data-uid="cad50ea429"] .formkit-button:hover,.formkit-form[data-uid="cad50ea429"] .formkit-submit:hover,.formkit-form[data-uid="cad50ea429"] .formkit-button:focus,.formkit-form[data-uid="cad50ea429"] .formkit-submit:focus{outline:none;}.formkit-form[data-uid="cad50ea429"] .formkit-button:hover > span,.formkit-form[data-uid="cad50ea429"] .formkit-submit:hover > span,.formkit-form[data-uid="cad50ea429"] .formkit-button:focus > span,.formkit-form[data-uid="cad50ea429"] .formkit-submit:focus > span{background-color:rgba(0,0,0,0.1);}.formkit-form[data-uid="cad50ea429"] .formkit-button > span,.formkit-form[data-uid="cad50ea429"] .formkit-submit > span{display:block;-webkit-transition:all 300ms ease-in-out;transition:all 300ms ease-in-out;padding:12px 24px;}.formkit-form[data-uid="cad50ea429"] .formkit-input{background:#ffffff;font-size:15px;padding:12px;border:1px solid #e3e3e3;-webkit-flex:1 0 auto;-ms-flex:1 0 auto;flex:1 0 auto;line-height:1.4;margin:0;-webkit-transition:border-color ease-out 300ms;transition:border-color ease-out 300ms;}.formkit-form[data-uid="cad50ea429"] .formkit-input:focus{outline:none;border-color:#1677be;-webkit-transition:border-color ease 300ms;transition:border-color ease 300ms;}.formkit-form[data-uid="cad50ea429"] .formkit-input::-webkit-input-placeholder{color:inherit;opacity:0.8;}.formkit-form[data-uid="cad50ea429"] .formkit-input::-moz-placeholder{color:inherit;opacity:0.8;}.formkit-form[data-uid="cad50ea429"] .formkit-input:-ms-input-placeholder{color:inherit;opacity:0.8;}.formkit-form[data-uid="cad50ea429"] .formkit-input::placeholder{color:inherit;opacity:0.8;}.formkit-form[data-uid="cad50ea429"] [data-group="dropdown"]{position:relative;display:inline-block;width:100%;}.formkit-form[data-uid="cad50ea429"] [data-group="dropdown"]::before{content:"";top:calc(50% - 2.5px);right:10px;position:absolute;pointer-events:none;border-color:#4f4f4f transparent transparent transparent;border-style:solid;border-width:6px 6px 0 6px;height:0;width:0;z-index:999;}.formkit-form[data-uid="cad50ea429"] [data-group="dropdown"] select{height:auto;width:100%;cursor:pointer;color:#333333;line-height:1.4;margin-bottom:0;padding:0 6px;-webkit-appearance:none;-moz-appearance:none;appearance:none;font-size:15px;padding:12px;padding-right:25px;border:1px solid #e3e3e3;background:#ffffff;}.formkit-form[data-uid="cad50ea429"] [data-group="dropdown"] select:focus{outline:none;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"]{text-align:left;margin:0;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"]{margin-bottom:10px;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] *{cursor:pointer;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"]:last-of-type{margin-bottom:0;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] input[type="checkbox"]{display:none;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] input[type="checkbox"] + label::after{content:none;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] input[type="checkbox"]:checked + label::after{border-color:#ffffff;content:"";}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] input[type="checkbox"]:checked + label::before{background:#10bf7a;border-color:#10bf7a;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] label{position:relative;display:inline-block;padding-left:28px;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] label::before,.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] label::after{position:absolute;content:"";display:inline-block;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] label::before{height:16px;width:16px;border:1px solid #e3e3e3;background:#ffffff;left:0px;top:3px;}.formkit-form[data-uid="cad50ea429"] [data-group="checkboxes"] [data-group="checkbox"] label::after{height:4px;width:8px;border-left:2px solid #4d4d4d;border-bottom:2px solid #4d4d4d;-webkit-transform:rotate(-45deg);-ms-transform:rotate(-45deg);transform:rotate(-45deg);left:4px;top:8px;}.formkit-form[data-uid="cad50ea429"] .formkit-alert{background:#f9fafb;border:1px solid #e3e3e3;border-radius:5px;-webkit-flex:1 0 auto;-ms-flex:1 0 auto;flex:1 0 auto;list-style:none;margin:25px auto;padding:12px;text-align:center;width:100%;}.formkit-form[data-uid="cad50ea429"] .formkit-alert:empty{display:none;}.formkit-form[data-uid="cad50ea429"] .formkit-alert-success{background:#d3fbeb;border-color:#10bf7a;color:#0c905c;}.formkit-form[data-uid="cad50ea429"] .formkit-alert-error{background:#fde8e2;border-color:#f2643b;color:#ea4110;}.formkit-form[data-uid="cad50ea429"] .formkit-spinner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;height:0px;width:0px;margin:0 auto;position:absolute;top:0;left:0;right:0;width:0px;overflow:hidden;text-align:center;-webkit-transition:all 300ms ease-in-out;transition:all 300ms ease-in-out;}.formkit-form[data-uid="cad50ea429"] .formkit-spinner > div{margin:auto;width:12px;height:12px;background-color:#fff;opacity:0.3;border-radius:100%;display:inline-block;-webkit-animation:formkit-bouncedelay-formkit-form-data-uid-cad50ea429- 1.4s infinite ease-in-out both;animation:formkit-bouncedelay-formkit-form-data-uid-cad50ea429- 1.4s infinite ease-in-out both;}.formkit-form[data-uid="cad50ea429"] .formkit-spinner > div:nth-child(1){-webkit-animation-delay:-0.32s;animation-delay:-0.32s;}.formkit-form[data-uid="cad50ea429"] .formkit-spinner > div:nth-child(2){-webkit-animation-delay:-0.16s;animation-delay:-0.16s;}.formkit-form[data-uid="cad50ea429"] .formkit-submit[data-active] .formkit-spinner{opacity:1;height:100%;width:50px;}.formkit-form[data-uid="cad50ea429"] .formkit-submit[data-active] .formkit-spinner ~ span{opacity:0;}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by[data-active="false"]{opacity:0.35;}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;width:100%;margin:10px 0;position:relative;}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit-container[data-active="false"]{opacity:0.35;}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit{-webkit-align-items:center;-webkit-box-align:center;-ms-flex-align:center;align-items:center;background-color:#ffffff;border-radius:9px;color:#3d3d3d;cursor:pointer;display:block;height:36px;margin:0 auto;opacity:0.95;padding:0;-webkit-text-decoration:none;text-decoration:none;text-indent:100%;-webkit-transition:ease-in-out all 200ms;transition:ease-in-out all 200ms;white-space:nowrap;overflow:hidden;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;width:157px;background-repeat:no-repeat;background-position:center;background-image:url("data:image/svg+xml;charset=utf8,%3Csvg width='133' height='36' viewBox='0 0 133 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.861 25.5C0.735 25.5 0.651 25.416 0.651 25.29V10.548C0.651 10.422 0.735 10.338 0.861 10.338H6.279C9.072 10.338 10.668 11.451 10.668 13.824C10.668 15.819 9.219 16.932 8.001 17.226C7.707 17.268 7.707 17.625 8.022 17.688C9.912 18.108 11.088 19.116 11.088 21.321C11.088 23.715 9.429 25.5 6.426 25.5H0.861ZM5.397 23.085C6.825 23.085 7.518 22.224 7.518 21.006C7.518 19.683 6.825 18.948 5.397 18.948H4.2V23.085H5.397ZM5.313 16.617C6.51 16.617 7.245 15.945 7.245 14.601C7.245 13.383 6.51 12.753 5.25 12.753H4.2V16.617H5.313ZM17.9758 23.883C17.9758 23.568 17.6608 23.505 17.5348 23.799C17.0308 24.954 16.1698 25.731 14.5528 25.731C12.8728 25.731 12.0958 24.471 12.0958 22.707V14.937C12.0958 14.811 12.1798 14.727 12.3058 14.727H15.2248C15.3508 14.727 15.4348 14.811 15.4348 14.937V21.657C15.4348 22.581 15.7708 23.022 16.4638 23.022C17.1778 23.022 17.6188 22.581 17.6188 21.657V14.937C17.6188 14.811 17.7028 14.727 17.8288 14.727H20.7478C20.8738 14.727 20.9578 14.811 20.9578 14.937V25.29C20.9578 25.416 20.8738 25.5 20.7478 25.5H18.1858C18.0598 25.5 17.9758 25.416 17.9758 25.29V23.883ZM25.6141 25.29C25.6141 25.416 25.5301 25.5 25.4041 25.5H22.4851C22.3591 25.5 22.2751 25.416 22.2751 25.29V14.937C22.2751 14.811 22.3591 14.727 22.4851 14.727H25.4041C25.5301 14.727 25.6141 14.811 25.6141 14.937V25.29ZM23.9131 13.74C22.8001 13.74 22.0441 12.942 22.0441 11.934C22.0441 10.926 22.8001 10.107 23.9131 10.107C25.0051 10.107 25.7611 10.926 25.7611 11.934C25.7611 12.942 25.0051 13.74 23.9131 13.74ZM26.7883 10.548C26.7883 10.422 26.8723 10.338 26.9983 10.338H29.9173C30.0433 10.338 30.1273 10.422 30.1273 10.548V22.056C30.1273 22.749 30.2533 23.085 30.8203 23.085C31.0093 23.085 31.1983 23.043 31.3663 23.001C31.5133 22.959 31.6183 22.959 31.6183 23.127V25.059C31.6183 25.164 31.5763 25.269 31.4923 25.311C30.9673 25.521 30.2953 25.71 29.5813 25.71C27.7123 25.71 26.7883 24.639 26.7883 22.476V10.548ZM32.4237 14.727C32.8227 14.727 32.9277 14.538 32.9697 14.055L33.1167 12.039C33.1167 11.913 33.2217 11.829 33.3477 11.829H35.8887C36.0147 11.829 36.0987 11.913 36.0987 12.039V14.517C36.0987 14.643 36.1827 14.727 36.3087 14.727H38.2827C38.4087 14.727 38.4927 14.811 38.4927 14.937V16.659C38.4927 16.785 38.4087 16.869 38.2827 16.869H36.0777V22.056C36.0777 22.875 36.5397 23.085 37.0647 23.085C37.4847 23.085 37.9467 22.938 38.3247 22.707C38.4717 22.623 38.5767 22.665 38.5767 22.833V24.828C38.5767 24.933 38.5347 25.017 38.4507 25.08C37.8417 25.458 36.9807 25.71 36.0357 25.71C34.2927 25.71 32.7387 24.912 32.7387 22.476V16.869H31.8567C31.7307 16.869 31.6467 16.785 31.6467 16.659V14.937C31.6467 14.811 31.7307 14.727 31.8567 14.727H32.4237ZM51.3808 14.727C51.5068 14.727 51.5908 14.79 51.6118 14.916L52.3888 19.851L52.5778 21.174C52.6198 21.468 52.9558 21.468 52.9768 21.174C53.0398 20.712 53.0818 20.271 53.1658 19.83L53.8798 14.916C53.9008 14.79 53.9848 14.727 54.1108 14.727H56.6728C56.8198 14.727 56.8828 14.811 56.8618 14.958L54.6778 25.311C54.6568 25.437 54.5728 25.5 54.4468 25.5H51.3178C51.1918 25.5 51.1078 25.437 51.0868 25.311L50.1208 20.082L49.8898 18.633C49.8688 18.444 49.6588 18.444 49.6378 18.633L49.4068 20.103L48.5458 25.311C48.5248 25.437 48.4408 25.5 48.3148 25.5H45.2068C45.0808 25.5 44.9968 25.437 44.9758 25.311L42.8128 14.958C42.7918 14.811 42.8548 14.727 43.0018 14.727H45.9628C46.0888 14.727 46.1728 14.79 46.1938 14.916L46.9288 19.83C47.0128 20.271 47.0758 20.754 47.1388 21.195C47.2018 21.51 47.4748 21.531 47.5378 21.195L47.7478 19.872L48.6088 14.916C48.6298 14.79 48.7138 14.727 48.8398 14.727H51.3808ZM61.1582 25.29C61.1582 25.416 61.0742 25.5 60.9482 25.5H58.0292C57.9032 25.5 57.8192 25.416 57.8192 25.29V14.937C57.8192 14.811 57.9032 14.727 58.0292 14.727H60.9482C61.0742 14.727 61.1582 14.811 61.1582 14.937V25.29ZM59.4572 13.74C58.3442 13.74 57.5882 12.942 57.5882 11.934C57.5882 10.926 58.3442 10.107 59.4572 10.107C60.5492 10.107 61.3052 10.926 61.3052 11.934C61.3052 12.942 60.5492 13.74 59.4572 13.74ZM62.8154 14.727C63.2144 14.727 63.3194 14.538 63.3614 14.055L63.5084 12.039C63.5084 11.913 63.6134 11.829 63.7394 11.829H66.2804C66.4064 11.829 66.4904 11.913 66.4904 12.039V14.517C66.4904 14.643 66.5744 14.727 66.7004 14.727H68.6744C68.8004 14.727 68.8844 14.811 68.8844 14.937V16.659C68.8844 16.785 68.8004 16.869 68.6744 16.869H66.4694V22.056C66.4694 22.875 66.9314 23.085 67.4564 23.085C67.8764 23.085 68.3384 22.938 68.7164 22.707C68.8634 22.623 68.9684 22.665 68.9684 22.833V24.828C68.9684 24.933 68.9264 25.017 68.8424 25.08C68.2334 25.458 67.3724 25.71 66.4274 25.71C64.6844 25.71 63.1304 24.912 63.1304 22.476V16.869H62.2484C62.1224 16.869 62.0384 16.785 62.0384 16.659V14.937C62.0384 14.811 62.1224 14.727 62.2484 14.727H62.8154ZM73.4298 16.323C73.4298 16.638 73.7868 16.68 73.9128 16.407C74.3748 15.315 75.1308 14.496 76.6008 14.496C78.2178 14.496 78.9528 15.609 78.9528 17.373V25.29C78.9528 25.416 78.8688 25.5 78.7428 25.5H75.8238C75.6978 25.5 75.6138 25.416 75.6138 25.29V18.633C75.6138 17.709 75.2778 17.268 74.5848 17.268C73.8708 17.268 73.4298 17.709 73.4298 18.633V25.29C73.4298 25.416 73.3458 25.5 73.2198 25.5H70.3008C70.1748 25.5 70.0908 25.416 70.0908 25.29V10.548C70.0908 10.422 70.1748 10.338 70.3008 10.338H73.2198C73.3458 10.338 73.4298 10.422 73.4298 10.548V16.323Z' fill='%231E1E1E'/%3E%3Cpath d='M100.132 16.3203C105.58 17.3761 107.272 22.4211 107.318 27.4961C107.318 27.6101 107.226 27.7041 107.112 27.7041H100.252C100.138 27.7041 100.046 27.6121 100.046 27.5001C100.026 23.5629 99.3877 20.0896 95.4865 19.9396C95.3705 19.9356 95.2725 20.0276 95.2725 20.1456V27.5001C95.2725 27.6141 95.1806 27.7061 95.0666 27.7061H88.206C88.092 27.7061 88 27.6141 88 27.5001V8.75585C88 8.64187 88.092 8.54989 88.206 8.54989H95.0686C95.1826 8.54989 95.2745 8.64187 95.2745 8.75585V15.7764C95.2745 15.8804 95.3585 15.9644 95.4625 15.9644C95.5445 15.9644 95.6185 15.9104 95.6425 15.8324C97.4081 10.0416 100.709 8.58588 106.07 8.55189C106.184 8.55189 106.276 8.64387 106.276 8.75785V15.7604C106.276 15.8744 106.184 15.9664 106.07 15.9664H100.166C100.066 15.9664 99.9856 16.0464 99.9856 16.1464C99.9856 16.2304 100.048 16.3043 100.132 16.3203ZM118.918 20.7095V16.1704C118.918 16.0564 119.01 15.9644 119.124 15.9644H124.173C124.273 15.9644 124.353 15.8844 124.353 15.7844C124.353 15.6985 124.291 15.6245 124.207 15.6085C120.256 14.8246 118.432 12.5511 118.37 8.75585C118.368 8.64387 118.458 8.54989 118.572 8.54989H125.986C126.1 8.54989 126.192 8.64187 126.192 8.75585V11.9532C126.192 12.0672 126.284 12.1592 126.398 12.1592H130.649C130.763 12.1592 130.855 12.2511 130.855 12.3651V15.7624C130.855 15.8764 130.763 15.9684 130.649 15.9684H126.398C126.284 15.9684 126.192 16.0604 126.192 16.1744V19.8356C126.192 21.1294 126.986 21.5553 128.04 21.5553C129.692 21.5553 131.323 20.8114 131.977 20.4735C132.113 20.4035 132.277 20.5015 132.277 20.6555V26.3543C132.277 26.5063 132.193 26.6463 132.059 26.7183C131.413 27.0582 129.418 28 127.136 28C122.435 27.996 118.918 26.0824 118.918 20.7095ZM109.266 27.4981V16.1704C109.266 16.0564 109.358 15.9644 109.472 15.9644H116.334C116.448 15.9644 116.54 16.0564 116.54 16.1704V27.4981C116.54 27.6121 116.448 27.7041 116.334 27.7041H109.472C109.358 27.7021 109.266 27.6101 109.266 27.4981ZM108.876 11.4913C108.876 13.4189 110.238 14.9826 112.853 14.9826C115.469 14.9826 116.83 13.4189 116.83 11.4913C116.83 9.56369 115.471 8 112.853 8C110.238 8 108.876 9.56369 108.876 11.4913Z' fill='%231E1E1E'/%3E%3C/svg%3E");}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit:hover,.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit:focus{background-color:#ffffff;-webkit-transform:scale(1.025) perspective(1px);-ms-transform:scale(1.025) perspective(1px);transform:scale(1.025) perspective(1px);opacity:1;}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit[data-variant="dark"],.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit[data-variant="light"]{background-color:transparent;border-color:transparent;width:133px;}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit[data-variant="light"]{color:#ffffff;background-image:url("data:image/svg+xml;charset=utf8,%3Csvg width='133' height='36' viewBox='0 0 133 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.861 25.5C0.735 25.5 0.651 25.416 0.651 25.29V10.548C0.651 10.422 0.735 10.338 0.861 10.338H6.279C9.072 10.338 10.668 11.451 10.668 13.824C10.668 15.819 9.219 16.932 8.001 17.226C7.707 17.268 7.707 17.625 8.022 17.688C9.912 18.108 11.088 19.116 11.088 21.321C11.088 23.715 9.429 25.5 6.426 25.5H0.861ZM5.397 23.085C6.825 23.085 7.518 22.224 7.518 21.006C7.518 19.683 6.825 18.948 5.397 18.948H4.2V23.085H5.397ZM5.313 16.617C6.51 16.617 7.245 15.945 7.245 14.601C7.245 13.383 6.51 12.753 5.25 12.753H4.2V16.617H5.313ZM17.9758 23.883C17.9758 23.568 17.6608 23.505 17.5348 23.799C17.0308 24.954 16.1698 25.731 14.5528 25.731C12.8728 25.731 12.0958 24.471 12.0958 22.707V14.937C12.0958 14.811 12.1798 14.727 12.3058 14.727H15.2248C15.3508 14.727 15.4348 14.811 15.4348 14.937V21.657C15.4348 22.581 15.7708 23.022 16.4638 23.022C17.1778 23.022 17.6188 22.581 17.6188 21.657V14.937C17.6188 14.811 17.7028 14.727 17.8288 14.727H20.7478C20.8738 14.727 20.9578 14.811 20.9578 14.937V25.29C20.9578 25.416 20.8738 25.5 20.7478 25.5H18.1858C18.0598 25.5 17.9758 25.416 17.9758 25.29V23.883ZM25.6141 25.29C25.6141 25.416 25.5301 25.5 25.4041 25.5H22.4851C22.3591 25.5 22.2751 25.416 22.2751 25.29V14.937C22.2751 14.811 22.3591 14.727 22.4851 14.727H25.4041C25.5301 14.727 25.6141 14.811 25.6141 14.937V25.29ZM23.9131 13.74C22.8001 13.74 22.0441 12.942 22.0441 11.934C22.0441 10.926 22.8001 10.107 23.9131 10.107C25.0051 10.107 25.7611 10.926 25.7611 11.934C25.7611 12.942 25.0051 13.74 23.9131 13.74ZM26.7883 10.548C26.7883 10.422 26.8723 10.338 26.9983 10.338H29.9173C30.0433 10.338 30.1273 10.422 30.1273 10.548V22.056C30.1273 22.749 30.2533 23.085 30.8203 23.085C31.0093 23.085 31.1983 23.043 31.3663 23.001C31.5133 22.959 31.6183 22.959 31.6183 23.127V25.059C31.6183 25.164 31.5763 25.269 31.4923 25.311C30.9673 25.521 30.2953 25.71 29.5813 25.71C27.7123 25.71 26.7883 24.639 26.7883 22.476V10.548ZM32.4237 14.727C32.8227 14.727 32.9277 14.538 32.9697 14.055L33.1167 12.039C33.1167 11.913 33.2217 11.829 33.3477 11.829H35.8887C36.0147 11.829 36.0987 11.913 36.0987 12.039V14.517C36.0987 14.643 36.1827 14.727 36.3087 14.727H38.2827C38.4087 14.727 38.4927 14.811 38.4927 14.937V16.659C38.4927 16.785 38.4087 16.869 38.2827 16.869H36.0777V22.056C36.0777 22.875 36.5397 23.085 37.0647 23.085C37.4847 23.085 37.9467 22.938 38.3247 22.707C38.4717 22.623 38.5767 22.665 38.5767 22.833V24.828C38.5767 24.933 38.5347 25.017 38.4507 25.08C37.8417 25.458 36.9807 25.71 36.0357 25.71C34.2927 25.71 32.7387 24.912 32.7387 22.476V16.869H31.8567C31.7307 16.869 31.6467 16.785 31.6467 16.659V14.937C31.6467 14.811 31.7307 14.727 31.8567 14.727H32.4237ZM51.3808 14.727C51.5068 14.727 51.5908 14.79 51.6118 14.916L52.3888 19.851L52.5778 21.174C52.6198 21.468 52.9558 21.468 52.9768 21.174C53.0398 20.712 53.0818 20.271 53.1658 19.83L53.8798 14.916C53.9008 14.79 53.9848 14.727 54.1108 14.727H56.6728C56.8198 14.727 56.8828 14.811 56.8618 14.958L54.6778 25.311C54.6568 25.437 54.5728 25.5 54.4468 25.5H51.3178C51.1918 25.5 51.1078 25.437 51.0868 25.311L50.1208 20.082L49.8898 18.633C49.8688 18.444 49.6588 18.444 49.6378 18.633L49.4068 20.103L48.5458 25.311C48.5248 25.437 48.4408 25.5 48.3148 25.5H45.2068C45.0808 25.5 44.9968 25.437 44.9758 25.311L42.8128 14.958C42.7918 14.811 42.8548 14.727 43.0018 14.727H45.9628C46.0888 14.727 46.1728 14.79 46.1938 14.916L46.9288 19.83C47.0128 20.271 47.0758 20.754 47.1388 21.195C47.2018 21.51 47.4748 21.531 47.5378 21.195L47.7478 19.872L48.6088 14.916C48.6298 14.79 48.7138 14.727 48.8398 14.727H51.3808ZM61.1582 25.29C61.1582 25.416 61.0742 25.5 60.9482 25.5H58.0292C57.9032 25.5 57.8192 25.416 57.8192 25.29V14.937C57.8192 14.811 57.9032 14.727 58.0292 14.727H60.9482C61.0742 14.727 61.1582 14.811 61.1582 14.937V25.29ZM59.4572 13.74C58.3442 13.74 57.5882 12.942 57.5882 11.934C57.5882 10.926 58.3442 10.107 59.4572 10.107C60.5492 10.107 61.3052 10.926 61.3052 11.934C61.3052 12.942 60.5492 13.74 59.4572 13.74ZM62.8154 14.727C63.2144 14.727 63.3194 14.538 63.3614 14.055L63.5084 12.039C63.5084 11.913 63.6134 11.829 63.7394 11.829H66.2804C66.4064 11.829 66.4904 11.913 66.4904 12.039V14.517C66.4904 14.643 66.5744 14.727 66.7004 14.727H68.6744C68.8004 14.727 68.8844 14.811 68.8844 14.937V16.659C68.8844 16.785 68.8004 16.869 68.6744 16.869H66.4694V22.056C66.4694 22.875 66.9314 23.085 67.4564 23.085C67.8764 23.085 68.3384 22.938 68.7164 22.707C68.8634 22.623 68.9684 22.665 68.9684 22.833V24.828C68.9684 24.933 68.9264 25.017 68.8424 25.08C68.2334 25.458 67.3724 25.71 66.4274 25.71C64.6844 25.71 63.1304 24.912 63.1304 22.476V16.869H62.2484C62.1224 16.869 62.0384 16.785 62.0384 16.659V14.937C62.0384 14.811 62.1224 14.727 62.2484 14.727H62.8154ZM73.4298 16.323C73.4298 16.638 73.7868 16.68 73.9128 16.407C74.3748 15.315 75.1308 14.496 76.6008 14.496C78.2178 14.496 78.9528 15.609 78.9528 17.373V25.29C78.9528 25.416 78.8688 25.5 78.7428 25.5H75.8238C75.6978 25.5 75.6138 25.416 75.6138 25.29V18.633C75.6138 17.709 75.2778 17.268 74.5848 17.268C73.8708 17.268 73.4298 17.709 73.4298 18.633V25.29C73.4298 25.416 73.3458 25.5 73.2198 25.5H70.3008C70.1748 25.5 70.0908 25.416 70.0908 25.29V10.548C70.0908 10.422 70.1748 10.338 70.3008 10.338H73.2198C73.3458 10.338 73.4298 10.422 73.4298 10.548V16.323Z' fill='white'/%3E%3Cpath d='M100.132 16.3203C105.58 17.3761 107.272 22.4211 107.318 27.4961C107.318 27.6101 107.226 27.7041 107.112 27.7041H100.252C100.138 27.7041 100.046 27.6121 100.046 27.5001C100.026 23.5629 99.3877 20.0896 95.4865 19.9396C95.3705 19.9356 95.2725 20.0276 95.2725 20.1456V27.5001C95.2725 27.6141 95.1806 27.7061 95.0666 27.7061H88.206C88.092 27.7061 88 27.6141 88 27.5001V8.75585C88 8.64187 88.092 8.54989 88.206 8.54989H95.0686C95.1826 8.54989 95.2745 8.64187 95.2745 8.75585V15.7764C95.2745 15.8804 95.3585 15.9644 95.4625 15.9644C95.5445 15.9644 95.6185 15.9104 95.6425 15.8324C97.4081 10.0416 100.709 8.58588 106.07 8.55189C106.184 8.55189 106.276 8.64387 106.276 8.75785V15.7604C106.276 15.8744 106.184 15.9664 106.07 15.9664H100.166C100.066 15.9664 99.9856 16.0464 99.9856 16.1464C99.9856 16.2304 100.048 16.3043 100.132 16.3203ZM118.918 20.7095V16.1704C118.918 16.0564 119.01 15.9644 119.124 15.9644H124.173C124.273 15.9644 124.353 15.8844 124.353 15.7844C124.353 15.6985 124.291 15.6245 124.207 15.6085C120.256 14.8246 118.432 12.5511 118.37 8.75585C118.368 8.64387 118.458 8.54989 118.572 8.54989H125.986C126.1 8.54989 126.192 8.64187 126.192 8.75585V11.9532C126.192 12.0672 126.284 12.1592 126.398 12.1592H130.649C130.763 12.1592 130.855 12.2511 130.855 12.3651V15.7624C130.855 15.8764 130.763 15.9684 130.649 15.9684H126.398C126.284 15.9684 126.192 16.0604 126.192 16.1744V19.8356C126.192 21.1294 126.986 21.5553 128.04 21.5553C129.692 21.5553 131.323 20.8114 131.977 20.4735C132.113 20.4035 132.277 20.5015 132.277 20.6555V26.3543C132.277 26.5063 132.193 26.6463 132.059 26.7183C131.413 27.0582 129.418 28 127.136 28C122.435 27.996 118.918 26.0824 118.918 20.7095ZM109.266 27.4981V16.1704C109.266 16.0564 109.358 15.9644 109.472 15.9644H116.334C116.448 15.9644 116.54 16.0564 116.54 16.1704V27.4981C116.54 27.6121 116.448 27.7041 116.334 27.7041H109.472C109.358 27.7021 109.266 27.6101 109.266 27.4981ZM108.876 11.4913C108.876 13.4189 110.238 14.9826 112.853 14.9826C115.469 14.9826 116.83 13.4189 116.83 11.4913C116.83 9.56369 115.471 8 112.853 8C110.238 8 108.876 9.56369 108.876 11.4913Z' fill='white'/%3E%3C/svg%3E");}@-webkit-keyframes formkit-bouncedelay-formkit-form-data-uid-cad50ea429-{0%,80%,100%{-webkit-transform:scale(0);-ms-transform:scale(0);transform:scale(0);}40%{-webkit-transform:scale(1);-ms-transform:scale(1);transform:scale(1);}}@keyframes formkit-bouncedelay-formkit-form-data-uid-cad50ea429-{0%,80%,100%{-webkit-transform:scale(0);-ms-transform:scale(0);transform:scale(0);}40%{-webkit-transform:scale(1);-ms-transform:scale(1);transform:scale(1);}}.formkit-form[data-uid="cad50ea429"] blockquote{padding:10px 20px;margin:0 0 20px;border-left:5px solid #e1e1e1;}.formkit-form[data-uid="cad50ea429"] .seva-custom-content{padding:15px;font-size:16px;color:#fff;mix-blend-mode:difference;}.formkit-form[data-uid="cad50ea429"] .formkit-modal.guard{max-width:420px;width:100%;} .formkit-form[data-uid="cad50ea429"]{border:1px solid #e3e3e3;max-width:700px;position:relative;overflow:hidden;}.formkit-form[data-uid="cad50ea429"] .formkit-background{width:100%;height:100%;position:absolute;top:0;left:0;background-size:cover;background-position:center;opacity:0.3;}.formkit-form[data-uid="cad50ea429"] [data-style="minimal"]{padding:20px;width:100%;position:relative;}.formkit-form[data-uid="cad50ea429"] .formkit-header{margin:0 0 27px 0;text-align:center;}.formkit-form[data-uid="cad50ea429"] .formkit-subheader{margin:18px 0;text-align:center;}.formkit-form[data-uid="cad50ea429"] .formkit-guarantee{font-size:13px;margin:10px 0 15px 0;text-align:center;}.formkit-form[data-uid="cad50ea429"] .formkit-guarantee > p{margin:0;}.formkit-form[data-uid="cad50ea429"] .formkit-powered-by-convertkit-container{margin-bottom:0;}.formkit-form[data-uid="cad50ea429"] .formkit-fields{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;margin:25px auto 0 auto;}.formkit-form[data-uid="cad50ea429"] .formkit-field{min-width:220px;}.formkit-form[data-uid="cad50ea429"] .formkit-field,.formkit-form[data-uid="cad50ea429"] .formkit-submit{margin:0 0 15px 0;-webkit-flex:1 0 100%;-ms-flex:1 0 100%;flex:1 0 100%;}.formkit-form[data-uid="cad50ea429"][min-width~="600"] [data-style="minimal"]{padding:40px;}.formkit-form[data-uid="cad50ea429"][min-width~="600"] .formkit-fields[data-stacked="false"]{margin-left:-5px;margin-right:-5px;}.formkit-form[data-uid="cad50ea429"][min-width~="600"] .formkit-fields[data-stacked="false"] .formkit-field,.formkit-form[data-uid="cad50ea429"][min-width~="600"] .formkit-fields[data-stacked="false"] .formkit-submit{margin:0 5px 15px 5px;}.formkit-form[data-uid="cad50ea429"][min-width~="600"] .formkit-fields[data-stacked="false"] .formkit-field{-webkit-flex:100 1 auto;-ms-flex:100 1 auto;flex:100 1 auto;}.formkit-form[data-uid="cad50ea429"][min-width~="600"] .formkit-fields[data-stacked="false"] .formkit-submit{-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;} .formkit-form[data-uid="cad50ea429"] h2{margin:0;}.formkit-form[data-uid="cad50ea429"] .formkit-header{margin:0;}.formkit-form[data-uid="cad50ea429"] .formkit-subheader{margin:0;}</style></form>
+</div>
+<div class="clear"></div>
+</div></div>
+<table border="0" cellpadding="0" cellspacing="0" class="section-columns columns-2">
+<tbody>
+<tr>
+<td class="first columns-cell">
+<div class="foot no-items section" id="footer-2-1"></div>
+</td>
+<td class="columns-cell">
+<div class="foot no-items section" id="footer-2-2"></div>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- outside of the include in order to lock Attribution widget -->
+<div class="foot section" id="footer-3"><div class="widget Attribution" data-version="1" id="Attribution1">
+<div class="widget-content" style="text-align: center;">
+Powered by <a href="https://www.blogger.com/" target="_blank">Blogger</a>.
+</div>
+<div class="clear"></div>
+</div></div>
+</div>
+</div>
+<div class="footer-cap-bottom cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+</footer>
+<!-- content -->
+</div>
+</div>
+<div class="content-cap-bottom cap-bottom">
+<div class="cap-left"></div>
+<div class="cap-right"></div>
+</div>
+</div>
+</div>
+<script type="text/javascript">
+    window.setTimeout(function() {
+        document.body.className = document.body.className.replace('loading', '');
+      }, 10);
+  </script>
+<!--It is your responsibility to notify your visitors about cookies used and data collected on your blog. Blogger makes a standard notification available for you to use on your blog, and you can customise it or replace it with your own notice. See http://www.blogger.com/go/cookiechoices for more details.-->
+<script defer="" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/cookienotice.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function(event) {
+      window.cookieChoices && cookieChoices.showCookieConsentBar && cookieChoices.showCookieConsentBar(
+          (window.cookieOptions && cookieOptions.msg) || 'This site uses cookies from Google to deliver its services and to analyse traffic. Your IP address and user agent are shared with Google, together with performance and security metrics, to ensure quality of service, generate usage statistics and to detect and address abuse.',
+          (window.cookieOptions && cookieOptions.close) || 'Got it',
+          (window.cookieOptions && cookieOptions.learn) || 'Learn more',
+          (window.cookieOptions && cookieOptions.link) || 'https://www.blogger.com/go/blogspot-cookies');
+    });
+  </script>
+
+<script type="text/javascript" src="./Yamaha DX7 chip reverse-engineering, part 6_ the control registers_files/3935100173-widgets.js"></script>
+<script type="text/javascript">
+window['__wavt'] = 'AEUoTZrIiZGbRkcrXxS3rnR9hSsM:1782947914884';_WidgetManager._Init('//www.blogger.com/rearrange?blogID\x3d6264947694886887540','//www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html','6264947694886887540');
+_WidgetManager._SetDataContext([{'name': 'blog', 'data': {'blogId': '6264947694886887540', 'title': 'Ken Shirriff\x27s blog', 'url': 'http://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html', 'canonicalUrl': 'http://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html', 'homepageUrl': 'http://www.righto.com/', 'searchUrl': 'http://www.righto.com/search', 'canonicalHomepageUrl': 'http://www.righto.com/', 'blogspotFaviconUrl': 'http://www.righto.com/favicon.ico', 'bloggerUrl': 'https://www.blogger.com', 'hasCustomDomain': true, 'httpsEnabled': false, 'enabledCommentProfileImages': true, 'gPlusViewType': 'FILTERED_POSTMOD', 'adultContent': false, 'analyticsAccountNumber': 'UA-3782444-1', 'encoding': 'UTF-8', 'locale': 'en', 'localeUnderscoreDelimited': 'en', 'languageDirection': 'ltr', 'isPrivate': false, 'isMobile': false, 'isMobileRequest': false, 'mobileClass': '', 'isPrivateBlog': false, 'isDynamicViewsAvailable': true, 'feedLinks': '\x3clink rel\x3d\x22alternate\x22 type\x3d\x22application/atom+xml\x22 title\x3d\x22Ken Shirriff\x26#39;s blog - Atom\x22 href\x3d\x22http://www.righto.com/feeds/posts/default\x22 /\x3e\n\x3clink rel\x3d\x22alternate\x22 type\x3d\x22application/rss+xml\x22 title\x3d\x22Ken Shirriff\x26#39;s blog - RSS\x22 href\x3d\x22http://www.righto.com/feeds/posts/default?alt\x3drss\x22 /\x3e\n\x3clink rel\x3d\x22service.post\x22 type\x3d\x22application/atom+xml\x22 title\x3d\x22Ken Shirriff\x26#39;s blog - Atom\x22 href\x3d\x22https://www.blogger.com/feeds/6264947694886887540/posts/default\x22 /\x3e\n\n\x3clink rel\x3d\x22alternate\x22 type\x3d\x22application/atom+xml\x22 title\x3d\x22Ken Shirriff\x26#39;s blog - Atom\x22 href\x3d\x22http://www.righto.com/feeds/7599448188873380170/comments/default\x22 /\x3e\n', 'meTag': '', 'adsenseHostId': 'ca-host-pub-1556223355139109', 'adsenseHasAds': false, 'adsenseAutoAds': false, 'boqCommentIframeForm': true, 'loginRedirectParam': '', 'view': '', 'dynamicViewsCommentsSrc': '//www.blogblog.com/dynamicviews/4224c15c4e7c9321/js/comments.js', 'dynamicViewsScriptSrc': '//www.blogblog.com/dynamicviews/6b7e89bf2b5de8da', 'plusOneApiSrc': 'https://apis.google.com/js/platform.js', 'disableGComments': true, 'interstitialAccepted': false, 'sharing': {'platforms': [{'name': 'Get link', 'key': 'link', 'shareMessage': 'Get link', 'target': ''}, {'name': 'Facebook', 'key': 'facebook', 'shareMessage': 'Share to Facebook', 'target': 'facebook'}, {'name': 'BlogThis!', 'key': 'blogThis', 'shareMessage': 'BlogThis!', 'target': 'blog'}, {'name': 'X', 'key': 'twitter', 'shareMessage': 'Share to X', 'target': 'twitter'}, {'name': 'Pinterest', 'key': 'pinterest', 'shareMessage': 'Share to Pinterest', 'target': 'pinterest'}, {'name': 'Email', 'key': 'email', 'shareMessage': 'Email', 'target': 'email'}], 'disableGooglePlus': true, 'googlePlusShareButtonWidth': 0, 'googlePlusBootstrap': '\x3cscript type\x3d\x22text/javascript\x22\x3ewindow.___gcfg \x3d {\x27lang\x27: \x27en\x27};\x3c/script\x3e'}, 'hasCustomJumpLinkMessage': false, 'jumpLinkMessage': 'Read more', 'pageType': 'item', 'postId': '7599448188873380170', 'postImageUrl': 'https://static.righto.com/images/dx7-data/die-labeled-w600.jpg', 'pageName': 'Yamaha DX7 chip reverse-engineering, part 6: the control registers', 'pageTitle': 'Ken Shirriff\x27s blog: Yamaha DX7 chip reverse-engineering, part 6: the control registers'}}, {'name': 'features', 'data': {}}, {'name': 'messages', 'data': {'edit': 'Edit', 'linkCopiedToClipboard': 'Link copied to clipboard!', 'ok': 'Ok', 'postLink': 'Post Link'}}, {'name': 'template', 'data': {'name': 'custom', 'localizedName': 'Custom', 'isResponsive': false, 'isAlternateRendering': false, 'isCustom': true}}, {'name': 'view', 'data': {'classic': {'name': 'classic', 'url': '?view\x3dclassic'}, 'flipcard': {'name': 'flipcard', 'url': '?view\x3dflipcard'}, 'magazine': {'name': 'magazine', 'url': '?view\x3dmagazine'}, 'mosaic': {'name': 'mosaic', 'url': '?view\x3dmosaic'}, 'sidebar': {'name': 'sidebar', 'url': '?view\x3dsidebar'}, 'snapshot': {'name': 'snapshot', 'url': '?view\x3dsnapshot'}, 'timeslide': {'name': 'timeslide', 'url': '?view\x3dtimeslide'}, 'isMobile': false, 'title': 'Yamaha DX7 chip reverse-engineering, part 6: the control registers', 'description': '  The Yamaha DX7 digital synthesizer (1983) was the classic synthesizer in 1980s pop music. It uses a technique called FM synthesis to produ...', 'featuredImage': 'https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_tetLbH_G0JKmyLXe7rQ60Dj_3K88h3YG1Q-fqIqZkLy7CssEOHZ3ErMVjGHKfnybZDK3PPrFBloBarjSDLoBSU0vKPNBfy6ON3w6Q4aodJItH27ieK5AWk1I-lVe-LTGE', 'url': 'http://www.righto.com/2022/02/yamaha-dx7-chip-reverse-engineering_7.html', 'type': 'item', 'isSingleItem': true, 'isMultipleItems': false, 'isError': false, 'isPage': false, 'isPost': true, 'isHomepage': false, 'isArchive': false, 'isLabelSearch': false, 'postId': 7599448188873380170}}]);
+_WidgetManager._RegisterWidget('_HeaderView', new _WidgetInfo('Header1', 'header', document.getElementById('Header1'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_BlogView', new _WidgetInfo('Blog1', 'main', document.getElementById('Blog1'), {'cmtInteractionsEnabled': false}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_HTMLView', new _WidgetInfo('HTML3', 'sidebar-right-1', document.getElementById('HTML3'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_PopularPostsView', new _WidgetInfo('PopularPosts1', 'sidebar-right-1', document.getElementById('PopularPosts1'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_BlogSearchView', new _WidgetInfo('BlogSearch1', 'sidebar-right-1', document.getElementById('BlogSearch1'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_LabelView', new _WidgetInfo('Label1', 'sidebar-right-1', document.getElementById('Label1'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_BlogArchiveView', new _WidgetInfo('BlogArchive1', 'sidebar-right-1', document.getElementById('BlogArchive1'), {'languageDirection': 'ltr', 'loadingMessage': 'Loading\x26hellip;'}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_HTMLView', new _WidgetInfo('HTML1', 'footer-1', document.getElementById('HTML1'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_AttributionView', new _WidgetInfo('Attribution1', 'footer-3', document.getElementById('Attribution1'), {}, 'displayModeFull'));
+</script>
+
+</body></html>

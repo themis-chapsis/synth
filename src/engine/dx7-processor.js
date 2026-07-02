@@ -18,15 +18,15 @@
  * sensitivity. LFO and pitch EG land in milestone 8; keyboard level/rate
  * scaling in milestone 10.
  *
- * PROVISIONAL DSP MATH (documented deviation, spec 10.3/10.5): the EG ROM
- * and level/index tables from the reverse-engineering references are
- * blocked by this environment's network policy (/reference/README.md).
- * Until transcribed: levels map at the widely documented ~0.75 dB/step;
- * EG rates use exponential slopes calibrated to published ballparks;
- * modulation index peaks at 2*pi*4.6 rad for level 99 (the spec's
- * figure); feedback averages the source's last two samples (standard
- * anti-oscillation) scaled to +/-pi at FB=7. All are constants-only
- * swaps once the tables arrive.
+ * DSP calibration status (see /reference/README.md): envelope level
+ * quantization, the output-level table, decay-rate formula, and attack
+ * shape follow the measured-hardware analysis in the MSFA DX7 envelope
+ * writeup (math facts; implementation original). Still approximate,
+ * pending sources with exact tables: LFO speed/delay curves, pitch EG
+ * rates, pitch/amp mod sensitivity scaling, velocity curve, rate-scaling
+ * slope, detune cents, and the 2*pi*4.6 peak modulation index (the
+ * spec's figure). Feedback averages the source's last two samples
+ * (standard anti-oscillation) scaled to +/-pi at FB=7.
  *
  * Message protocol (main thread -> processor):
  *   {type:'noteOn', note, velocity}   MIDI note, velocity 1-127
@@ -38,7 +38,12 @@
 const NUM_VOICES = 16;
 const NUM_OPS = 6;
 const TWO_PI = 2 * Math.PI;
-const SILENCE_DB = -96;
+/** One hardware amplitude step: 20*log10(2)/256 dB (~0.0235). */
+const STEP_DB = 6.020599913279624 / 256;
+/** Envelope floor: clipped 3824 steps below full scale (measured). */
+const SILENCE_DB = -3824 * STEP_DB; // ~-89.9 dB
+/** Attack jump start: 1700 steps (~40 dB) above the floor (measured). */
+const ATTACK_JUMP_DB = SILENCE_DB + 1700 * STEP_DB;
 /** Peak phase deviation contributed by a level-99 modulator (spec 10.5). */
 const MOD_INDEX_MAX = TWO_PI * 4.6;
 /** Peak self/loop feedback deviation at FB=7 (provisional). */
@@ -115,13 +120,39 @@ export const algorithms = [
   { id: 32, carriers: [0, 1, 2, 3, 4, 5], modulation: {}, feedback: 5 }
 ];
 
-/** EG/output level parameter (0-99) -> dB (0 dB at 99). ~0.75 dB/step. */
-export function levelToDb(l) {
-  if (l <= 0) return SILENCE_DB;
-  return Math.max(SILENCE_DB, (l - 99) * 0.75);
+/*
+ * Level mappings measured from the hardware (documented in the MSFA
+ * DX7 envelope analysis; math facts, implementation original):
+ * EG levels quantize through a coarse curve to 6-bit "actual levels"
+ * (1 unit = 64 steps ~ 1.505 dB); output levels use a finer 0..127
+ * scale (1 unit = 32 steps ~ 0.7526 dB) with a lookup for 0-19.
+ */
+
+/** EG level parameter 0-99 -> quantized 6-bit actual level. */
+function egActualLevel(l) {
+  if (l <= 5) return 2 * l;
+  if (l <= 16) return 5 + l;
+  if (l <= 20) return 4 + l;
+  return 14 + (l >> 1);
 }
 
-export const dbToAmp = (db) => (db <= SILENCE_DB ? 0 : 10 ** (db / 20));
+/** EG level parameter (0-99) -> dB (0 dB at 99, floor ~-89.9). */
+export function levelToDb(l) {
+  return Math.max(SILENCE_DB, (egActualLevel(l) - 63) * 64 * STEP_DB);
+}
+
+/** Output level 0-19 lookup (20-99 continue linearly as 28 + l). */
+export const opLevelTable = [
+  0, 5, 9, 13, 17, 20, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 42, 43, 45, 46
+];
+
+/** Operator output level parameter (0-99) -> dB (0 dB at 99). */
+export function outputLevelToDb(l) {
+  const scaled = l < 20 ? opLevelTable[l] : 28 + l;
+  return Math.max(SILENCE_DB, (scaled - 127) * 32 * STEP_DB);
+}
+
+export const dbToAmp = (db) => (db <= SILENCE_DB + 0.01 ? 0 : 10 ** (db / 20));
 
 /**
  * 4-stage rate/level envelope generator (spec 10.3).
@@ -165,9 +196,14 @@ export class EnvelopeGenerator {
     return levelToDb(this.levels[this.stage]);
   }
 
-  /** dB/second decay slope for a rate parameter (provisional curve). */
+  /**
+   * dB/second decay slope for a rate parameter — the measured hardware
+   * formula: qrate = rate*41/64 (6 bits), each 4 qrate steps doubling
+   * the clock, fractional steps interpolated by quarters.
+   */
   decaySlope(rate) {
-    return 0.28 * 2 ** (rate / 6.5);
+    const qr = Math.min(63, Math.floor((rate * 41) / 64));
+    return 0.2819 * 2 ** Math.floor(qr / 4) * (1 + 0.25 * (qr % 4));
   }
 
   /** Advance one sample; returns linear amplitude 0..1. */
@@ -176,10 +212,13 @@ export class EnvelopeGenerator {
     const dt = 1 / this.sampleRate;
 
     if (this.db < target) {
-      // Rising segment: exponential approach (attack-shaped).
-      const tau = 0.002 * 2 ** ((72 - this.rates[this.stage]) / 8);
-      this.db += (target - this.db) * (dt / tau);
-      if (target - this.db < 0.5) this.db = target;
+      // Attack: decay slope scaled by a factor that shrinks as the level
+      // approaches full scale (2 + gap/6.02 dB), after an immediate jump
+      // to ~40 dB above the floor — the measured hardware shape.
+      if (this.db < ATTACK_JUMP_DB) this.db = ATTACK_JUMP_DB;
+      const factor = 2 + Math.floor(-this.db / (256 * STEP_DB));
+      this.db += this.decaySlope(this.rates[this.stage]) * factor * dt;
+      if (this.db > target) this.db = target;
     } else if (this.db > target) {
       this.db -= this.decaySlope(this.rates[this.stage]) * dt;
       if (this.db < target) this.db = target;
@@ -463,7 +502,7 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
       // (provisional linear blend; exact curve pending references).
       const kvs = this.voiceData[b + OP.KVS] / 7;
       const velFactor = 1 - kvs + kvs * v.velocity;
-      state.amp = dbToAmp(levelToDb(scaledOutputLevel(this.voiceData, op, v.note))) * velFactor;
+      state.amp = dbToAmp(outputLevelToDb(scaledOutputLevel(this.voiceData, op, v.note))) * velFactor;
       state.ams = this.voiceData[b + OP.AMS];
     }
     v.pitchEg.setParams(

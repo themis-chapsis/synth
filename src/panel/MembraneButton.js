@@ -64,6 +64,22 @@ export class MembraneButton {
     sheen.setAttribute('stroke-width', 0.7);
     slot.appendChild(sheen);
 
+    if (def.char) {
+      // Voice-name character legend in the button corner (manual:
+      // "reversed dark brown type in the right corner of most buttons").
+      const ch = document.createElementNS(SVG_NS, 'text');
+      ch.setAttribute('x', def.x + def.w - 3);
+      ch.setAttribute('y', def.y + 8);
+      ch.setAttribute('text-anchor', 'end');
+      ch.setAttribute('font-family', "'Barlow Condensed', 'Arial Narrow', sans-serif");
+      ch.setAttribute('font-size', 6);
+      ch.setAttribute('font-weight', 600);
+      ch.setAttribute('fill', '#31241a');
+      ch.textContent = def.char;
+      ch.style.pointerEvents = 'none';
+      slot.appendChild(ch);
+    }
+
     if (def.number != null) {
       const num = document.createElementNS(SVG_NS, 'text');
       num.setAttribute('x', def.x + def.w / 2);

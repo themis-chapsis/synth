@@ -153,19 +153,21 @@ function boot() {
   store.subscribe(sync);
   sync(store.getState());
 
-  // SysEx banks. Boot: if the factory bank file has been placed in
-  // public/ (rom1a.syx — not bundled; downloads are blocked in the build
-  // environment, see /reference), load it into the internal bank per
-  // spec 11. At runtime, dropping a .syx file on the page inserts it as
-  // the cartridge (spec 2: single loadable SysEx file as "cartridge").
-  const loadSysex = (buffer, bank) => {
+  // SysEx banks (spec 11): the bundled factory ROM1A loads into the
+  // internal bank at boot, ROM1B starts in the cartridge slot. At
+  // runtime, dropping any 32-voice .syx file on the page replaces the
+  // cartridge (spec 2: single loadable SysEx file as "cartridge").
+  const loadSysex = (buffer, bank, silent = false) => {
     const { voices } = parseBulkDump(new Uint8Array(buffer));
-    store.dispatch({ type: 'loadBank', bank, voices });
+    store.dispatch({ type: 'loadBank', bank, voices, silent });
   };
-  fetch('rom1a.syx')
-    .then((r) => (r.ok ? r.arrayBuffer() : null))
-    .then((buf) => buf && loadSysex(buf, 'internal'))
-    .catch(() => {});
+  const bootBank = (url, bank) =>
+    fetch(url)
+      .then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((buf) => buf && loadSysex(buf, bank, true))
+      .catch((err) => console.error('[sysex] boot bank failed:', err));
+  bootBank(new URL('./sysex/rom1a.syx', import.meta.url), 'internal')
+    .then(() => bootBank(new URL('./sysex/rom1b.syx', import.meta.url), 'cartridge'));
   window.addEventListener('dragover', (e) => e.preventDefault());
   window.addEventListener('drop', async (e) => {
     e.preventDefault();

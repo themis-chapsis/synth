@@ -21,10 +21,20 @@ page.on('pageerror', (e) => console.error('pageerror:', e.message));
 await page.goto(url, { waitUntil: 'networkidle' });
 
 const result = await page.evaluate(async () => {
-  const { ensureEngine } = window.__fm6;
+  const { ensureEngine, store } = window.__fm6;
   await ensureEngine();
   const engine = window.__fm6.engine;
   const { ctx, masterGain } = engine;
+
+  // Boot loads the factory ROM1A bank; measurements below assume the
+  // neutral INIT VOICE, so run the real VOICE INIT flow first (FUNCTION
+  // 10, double YES — lands in EDIT mode).
+  const initPress = (id) => store.dispatch({ type: 'panelButtonPressed', id });
+  initPress('function');
+  initPress('btn-10');
+  initPress('yes');
+  initPress('yes');
+  await new Promise((r) => setTimeout(r, 60)); // let the voice sync land
 
   // Tap the post-VOLUME signal.
   const tap = ctx.createAnalyser();
@@ -61,10 +71,8 @@ const result = await page.evaluate(async () => {
   const silent = capture();
 
   // Spec 13: parameter changes must reach the engine fast. Select OP1
-  // OUTPUT LEVEL in EDIT mode, hold a note, slam the value to 0 via DATA
-  // ENTRY, and time how long the output takes to start collapsing.
-  const { store } = window.__fm6;
-  store.dispatch({ type: 'panelButtonPressed', id: 'edit-compare' });
+  // OUTPUT LEVEL (already in EDIT mode after voice init), hold a note,
+  // slam the value to 0 via DATA ENTRY, and time the collapse.
   store.dispatch({ type: 'panelButtonPressed', id: 'btn-27' });
   engine.noteOn(60, 100);
   await settle(300);
@@ -160,10 +168,28 @@ const result = await page.evaluate(async () => {
   const vibratoSpread = await freqSpread();
   engine.noteOff(60);
 
+  // Factory bank spot check (spec 15.3): the boot-loaded ROM1A patches
+  // must be present and audible through the engine.
+  store.dispatch({ type: 'escape' });
+  store.dispatch({ type: 'panelButtonPressed', id: 'btn-01' }); // BRASS 1
+  const brassLcd = store.getState().lcd[1];
+  await new Promise((r) => setTimeout(r, 60));
+  engine.noteOn(60, 100);
+  await settle(400);
+  tap.fftSize = 2048;
+  const brassRms = (() => {
+    const b = new Float32Array(2048);
+    tap.getFloatTimeDomainData(b);
+    return Math.sqrt(b.reduce((s, x) => s + x * x, 0) / b.length);
+  })();
+  engine.noteOff(60);
+  await settle(400);
+
   return {
     sampleRate: ctx.sampleRate, loud, quiet, silent, paramLatencyMs,
     fm: { pureH2, fmH2, algH2 },
-    vibrato: { steadySpread, vibratoSpread }
+    vibrato: { steadySpread, vibratoSpread },
+    factory: { brassLcd, brassRms }
   };
 });
 
@@ -187,6 +213,8 @@ if (!(algH2 < fmH2 - 15)) problems.push(`algorithm 32 did not flatten the spectr
 const { steadySpread, vibratoSpread } = result.vibrato;
 if (!(steadySpread < 3)) problems.push(`pitch unstable without LFO (spread ${steadySpread.toFixed(2)} Hz)`);
 if (!(vibratoSpread > 8)) problems.push(`no vibrato with PMD 99 (spread ${vibratoSpread.toFixed(2)} Hz)`);
+if (result.factory.brassLcd !== 'INT 1 BRASS   1 ') problems.push(`ROM1A not loaded (lcd "${result.factory.brassLcd}")`);
+if (!(result.factory.brassRms > 0.01)) problems.push(`factory patch silent (rms=${result.factory.brassRms})`);
 
 console.log(JSON.stringify(result, null, 2));
 if (problems.length) {

@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { EnvelopeGenerator, levelToDb, dbToAmp, opFrequency } from '../src/engine/dx7-processor.js';
+import { EnvelopeGenerator, levelToDb, dbToAmp, outputLevelToDb, opFrequency } from '../src/engine/dx7-processor.js';
 
 const SR = 48000;
 
@@ -19,12 +19,21 @@ function runFor(eg, seconds) {
   return amp;
 }
 
-describe('level mapping', () => {
-  it('is 0 dB at 99, ~0.75 dB per step, silent at 0', () => {
+describe('level mapping (measured hardware curves)', () => {
+  it('EG levels: 0 dB at 99, quantized ~1.5 dB per actual-level unit', () => {
     expect(levelToDb(99)).toBe(0);
-    expect(levelToDb(89)).toBeCloseTo(-7.5, 5);
+    // Level 89 -> actual level 58, 5 units below full = 5 * 64 steps.
+    expect(levelToDb(89)).toBeCloseTo(-7.526, 2);
     expect(dbToAmp(levelToDb(0))).toBe(0);
     expect(dbToAmp(0)).toBe(1);
+  });
+
+  it('output levels: 0.7526 dB units with the low-end lookup', () => {
+    expect(outputLevelToDb(99)).toBe(0);
+    expect(outputLevelToDb(89)).toBeCloseTo(-10 * 0.7526, 2);
+    // Lookup region: level 10 maps to 31 on the 0-127 scale.
+    expect(outputLevelToDb(10)).toBeCloseTo((31 - 127) * 0.7526, 1);
+    expect(dbToAmp(outputLevelToDb(0))).toBe(0);
   });
 });
 

@@ -17,32 +17,57 @@ beforeEach(() => {
   store = createStore();
 });
 
-describe('voice name editing', () => {
+describe('voice name editing (manual CHARACTER-key scheme)', () => {
+  const hold = (id) => store.dispatch({ type: 'panelButtonPressed', id });
+  const release = (id) => store.dispatch({ type: 'panelButtonReleased', id });
+
   beforeEach(() => {
     press('edit-compare');
     press('btn-32');
   });
 
-  it('YES/NO change the character under the cursor', () => {
-    expect(state().lcd[1]).toBe('      INIT VOICE');
-    press('yes'); // 'I' -> 'J'
-    expect(voiceName(state().voice)).toBe('JNIT VOICE');
-    press('no');
-    expect(voiceName(state().voice)).toBe('INIT VOICE');
-  });
-
-  it('re-pressing button 32 advances the cursor with wraparound', () => {
+  it('YES/NO move the cursor (the < and > keys), wrapping', () => {
     expect(state().nameCursor).toBe(0);
-    press('btn-32');
-    press('btn-32');
+    press('yes');
+    press('yes');
     expect(state().nameCursor).toBe(2);
-    press('yes'); // 'I' at pos 2 -> 'J'
-    expect(voiceName(state().voice)).toBe('INJT VOICE');
-    for (let i = 0; i < 8; i++) press('btn-32');
-    expect(state().nameCursor).toBe(0);
+    press('no');
+    expect(state().nameCursor).toBe(1);
+    press('no');
+    press('no');
+    expect(state().nameCursor).toBe(9); // wrapped backwards
+    expect(voiceName(state().voice)).toBe('INIT VOICE'); // unchanged
   });
 
-  it('DATA ENTRY sweeps the printable character range', () => {
+  it('CHARACTER (held EDIT/COMPARE) + button types the corner char', () => {
+    hold('edit-compare'); // becomes the CHARACTER key, no COMPARE toggle
+    expect(state().mode).toBe(PanelMode.EDIT);
+    press('btn-12'); // 'B'
+    press('btn-11'); // 'A'
+    press('btn-29'); // 'S'
+    press('btn-29'); // 'S'
+    press('function'); // space
+    press('btn-01'); // '1'
+    release('edit-compare');
+    expect(voiceName(state().voice)).toBe('BASS 1OICE');
+    expect(state().nameCursor).toBe(6); // advanced per character
+    // Released: the buttons act normally again.
+    press('btn-07');
+    expect(state().editParam).toBe(7);
+  });
+
+  it('utility buttons type W X Y Z - . while CHARACTER is held', () => {
+    hold('edit-compare');
+    press('store'); // W
+    press('mem-protect-int'); // X
+    press('mem-select-crt'); // .
+    release('edit-compare');
+    expect(voiceName(state().voice)).toBe('WX.T VOICE');
+    expect(state().mode).toBe(PanelMode.EDIT); // store/protect suppressed
+    expect(state().memoryProtect.internal).toBe(true);
+  });
+
+  it('DATA ENTRY sweeps the character at the cursor', () => {
     store.dispatch({ type: 'dataEntry', value: 1 });
     expect(state().voice[paramIndex.get('name0')]).toBe(127);
     store.dispatch({ type: 'dataEntry', value: 0 });
@@ -63,16 +88,30 @@ describe('edit recall and voice init', () => {
 
     press('function');
     press('btn-09'); // EDIT RECALL ?
-    press('yes');
+    press('yes'); // arms the confirmation
+    expect(state().lcd[0]).toBe('ARE YOU SURE ?  ');
+    expect(state().mode).toBe(PanelMode.FUNCTION);
+    press('yes'); // second YES executes (manual: double prompt)
     expect(state().mode).toBe(PanelMode.EDIT);
     expect(state().voice[paramIndex.get('algorithm')]).toBe(1);
   });
 
-  it('voice init loads INIT VOICE and enters EDIT', () => {
+  it('NO cancels an armed confirmation', () => {
+    press('function');
+    press('btn-10');
+    press('yes');
+    expect(state().lcd[0]).toBe('ARE YOU SURE ?  ');
+    press('no');
+    expect(state().lcd[0]).toBe('VOICE INIT ?    ');
+    expect(state().mode).toBe(PanelMode.FUNCTION);
+  });
+
+  it('voice init loads INIT VOICE and enters EDIT after double YES', () => {
     press('edit-compare');
     press('yes');
     press('function');
     press('btn-10'); // VOICE INIT ?
+    press('yes');
     press('yes');
     expect(state().mode).toBe(PanelMode.EDIT);
     expect(state().voice).toEqual(initVoice());
@@ -82,16 +121,18 @@ describe('edit recall and voice init', () => {
 describe('cartridge functions', () => {
   const algAt = (bank, slot) => state().banks[bank][slot]?.[paramIndex.get('algorithm')];
 
+  const confirm = () => { press('yes'); press('yes'); }; // double prompt
+
   it('format initializes 32 cartridge voices, respecting protect', () => {
     press('function');
-    press('btn-11'); // CRT FORM ?
-    press('yes');
+    press('btn-11'); // CART FORM ?
+    confirm();
     expect(state().lcd[0]).toBe('MEMORY PROTECTED');
     expect(state().banks.cartridge[0]).toBeNull();
 
     press('mem-protect-crt'); // protect off
     press('btn-11');
-    press('yes');
+    confirm();
     expect(state().banks.cartridge).toHaveLength(32);
     expect(state().banks.cartridge[31]).toEqual(initVoice());
   });
@@ -105,18 +146,18 @@ describe('cartridge functions', () => {
     press('function');
     press('mem-protect-crt');
     press('btn-15'); // SAVE MEMORY ?
-    press('yes');
+    confirm();
     expect(algAt('cartridge', 2)).toBe(21);
     expect(state().lcd[0]).toBe(' SAVE COMPLETED ');
 
     // Mutate cartridge, then load it back into internal.
     state().banks.cartridge[2][paramIndex.get('algorithm')] = 9;
     press('btn-16'); // LOAD MEMORY ?
-    press('yes');
+    confirm();
     expect(state().lcd[0]).toBe('MEMORY PROTECTED'); // internal still protected
     press('mem-protect-int');
     press('btn-16');
-    press('yes');
+    confirm();
     expect(algAt('internal', 2)).toBe(9);
   });
 });

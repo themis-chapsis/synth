@@ -42,18 +42,30 @@ function editScreen(state, buffer) {
 const FUNCTION_NOTICES = {
   editRecall: 'EDIT RECALL ?',
   voiceInit: 'VOICE INIT ?',
-  cartridgeForm: 'CRT FORM ?',
-  batteryCheck: 'BATTERY VOLT=3.9',
+  cartridgeForm: 'CART FORM ?',
+  batteryCheck: 'BATTERY VOLT=3.0',
   cartridgeSave: 'SAVE MEMORY ?',
   cartridgeLoad: 'LOAD MEMORY ?'
 };
 
 function functionScreen(state) {
+  // Manual: confirm-style functions ask twice before executing.
+  if (state.confirmPending) return ['ARE YOU SURE ?', ''];
+
   const entry = functionMap[state.functionParam - 1];
   const key = functionTargetKey(entry, state.functionSub);
   if (key == null) {
     if (entry?.param === 'midi' && state.functionSub === 2) return ['MIDI TRANSMIT ?', ''];
     return [FUNCTION_NOTICES[entry?.param] ?? 'FUNCTION CONTROL', ''];
+  }
+  // Portamento mode names depend on poly/mono (manual): RETAIN/FOLLOW
+  // sustain behavior in poly, fingered/full-time glide in mono.
+  if (key === 'portamentoMode') {
+    const v = state.funcValues.portamentoMode;
+    const text = state.funcValues.polyMono === 0
+      ? (v ? 'SUS-KEY P FOLLOW' : 'SUS-KEY P RETAIN')
+      : (v ? 'FULL TIME PORTA' : 'FINGERED PORTA');
+    return ['PORTA MODE', text];
   }
   const def = functionParamDefs[key];
   return [def.name, valueRow(def.display(state.funcValues[key]))];
