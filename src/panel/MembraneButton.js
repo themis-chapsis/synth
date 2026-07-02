@@ -65,8 +65,8 @@ export class MembraneButton {
     slot.appendChild(sheen);
 
     // Legend type scales with the button so it reads at any panel size.
-    const charSize = Math.max(6, Math.round(def.h * 0.17));
-    const numSize = Math.round(def.h * 0.32);
+    const charSize = Math.max(6, Math.round(def.h * 0.18));
+    const numSize = Math.round(def.h * 0.38);
 
     if (def.char) {
       // Voice-name character legend in the button corner (manual:

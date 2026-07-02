@@ -48,17 +48,17 @@ function text(str, x, y, { size = 7, fill = colors.silkscreenWhite, anchor = 'mi
 /** Thin silkscreen bracket: a horizontal rule with short end ticks and a centered label. */
 function bracket(x1, x2, y, label, fill) {
   const g = el('g');
-  const stroke = { stroke: fill, 'stroke-width': 1, fill: 'none' };
-  g.appendChild(el('path', { d: `M ${x1} ${y + 6} V ${y} H ${x2} V ${y + 6}`, ...stroke }));
+  const stroke = { stroke: fill, 'stroke-width': 1.2, fill: 'none' };
+  g.appendChild(el('path', { d: `M ${x1} ${y + 7} V ${y} H ${x2} V ${y + 7}`, ...stroke }));
   if (label) {
     const mid = (x1 + x2) / 2;
-    const t = text(label, mid, y + 4.5, { size: 13.5, fill, weight: 600, spacing: 0.4 });
+    const t = text(label, mid, y + 5.5, { size: 17.5, fill, weight: 600, spacing: 0.4 });
     t.setAttribute('class', 'bracket-label');
     // Knock the line out behind the label so the text sits "in" the rule.
     // Width is provisional here; finalizeSilkscreen() sizes it from real
     // text metrics once the SVG is in the DOM and fonts have loaded.
-    const pad = label.length * 5 + 8;
-    const knockout = el('rect', { x: mid - pad / 2, y: y - 8, width: pad, height: 18, fill: colors.panelBg, class: 'bracket-knockout' });
+    const pad = label.length * 6 + 10;
+    const knockout = el('rect', { x: mid - pad / 2, y: y - 10, width: pad, height: 24, fill: colors.panelBg, class: 'bracket-knockout' });
     g.appendChild(knockout);
     g.appendChild(t);
   }
@@ -97,12 +97,12 @@ function silkscreen() {
 
   // Generic model name, no trademarked branding (spec section 18).
   g.appendChild(text('FM6', 24, 52, { size: 26, weight: 600, anchor: 'start', fill: white, spacing: 1 }));
-  g.appendChild(text('DIGITAL ALGORITHM SYNTHESIZER', 25, 76, { size: 14, weight: 500, anchor: 'start', fill: green, spacing: 0.9 }));
+  g.appendChild(text('DIGITAL ALGORITHM SYNTHESIZER', 25, 78, { size: 18, weight: 500, anchor: 'start', fill: green, spacing: 0.9 }));
 
   // Slider labels + scale ticks. Label baseline stays clear of the track
   // recess, which starts at trackTop - cap/2 - 2.
   for (const s of sliders) {
-    g.appendChild(text(s.label, s.x, s.trackTop - 24, { size: 15.5, fill: green, weight: 600, spacing: 0.6 }));
+    g.appendChild(text(s.label, s.x, s.trackTop - 26, { size: 20, fill: green, weight: 600, spacing: 0.6 }));
     for (let i = 0; i <= 10; i++) {
       const y = s.trackTop + (i / 10) * (s.trackBottom - s.trackTop);
       const wTick = i === 0 || i === 5 || i === 10 ? 10 : 6;
@@ -113,8 +113,8 @@ function silkscreen() {
   // Mode-button labels above their buttons.
   for (const b of modeButtons) {
     const lines = b.label.split('\n').length;
-    const yBase = b.y - 10 - (lines - 1) * 15;
-    g.appendChild(text(b.label, b.x + b.w / 2, yBase, { size: 14, fill: white, weight: 500, spacing: 0.3 }));
+    const yBase = b.y - 12 - (lines - 1) * 19;
+    g.appendChild(text(b.label, b.x + b.w / 2, yBase, { size: 18, fill: white, weight: 500, spacing: 0.3 }));
   }
   for (const br of modeBrackets) {
     g.appendChild(bracket(br.x1, br.x2, br.y, br.label, green));
@@ -124,7 +124,7 @@ function silkscreen() {
   // button, orange FUNCTION legends below; the group brackets sit outside
   // the legends (green above, orange below).
   const m = matrix;
-  const LEG = 15; // legend font size
+  const LEG = 19.5; // legend font size
   const LINE = LEG + 1; // line spacing (matches text()'s tspan dy)
   for (let n = 1; n <= 32; n++) {
     const cx = buttonCenterX(n);
@@ -135,11 +135,11 @@ function silkscreen() {
     const edit = editLegends[n - 1];
     if (edit) {
       const lines = edit.split('\n').length;
-      g.appendChild(text(edit, cx, btnTop - 19 - (lines - 1) * LINE, { size: LEG, fill: green, weight: 500 }));
+      g.appendChild(text(edit, cx, btnTop - 26 - (lines - 1) * LINE, { size: LEG, fill: green, weight: 500 }));
     }
     const fn = functionLegends[n - 1];
     if (fn) {
-      g.appendChild(text(fn, cx, btnBot + 25, { size: LEG, fill: orange, weight: 500 }));
+      g.appendChild(text(fn, cx, btnBot + 32, { size: LEG, fill: orange, weight: 500 }));
     }
   }
   const spanX = (br) => [
@@ -149,12 +149,12 @@ function silkscreen() {
   for (const br of editBrackets) {
     const [x1, x2] = spanX(br);
     const row = br.from <= 16 ? 0 : 1;
-    g.appendChild(bracket(x1, x2, m.rowY[row] - 64, br.label, green));
+    g.appendChild(bracket(x1, x2, m.rowY[row] - 84, br.label, green));
   }
   for (const br of functionBrackets) {
     const [x1, x2] = spanX(br);
     const row = br.from <= 16 ? 0 : 1;
-    const y = m.rowY[row] + m.btnH + 68;
+    const y = m.rowY[row] + m.btnH + 82;
     // Function brackets hang below their legends: flip the ticks upward.
     const g2 = el('g', { transform: `translate(0 ${y}) scale(1 -1) translate(0 ${-y})` });
     g2.appendChild(bracket(x1, x2, y, br.label, orange));
