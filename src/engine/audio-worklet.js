@@ -52,6 +52,12 @@ export async function createEngine(initialVolume = 0.8) {
     noteOn: (note, velocity = 100) => node.port.postMessage({ type: 'noteOn', note, velocity }),
     noteOff: (note) => node.port.postMessage({ type: 'noteOff', note }),
     allOff: () => node.port.postMessage({ type: 'allOff' }),
-    setVolume: (v) => masterGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01)
+    setVolume: (v) => masterGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01),
+    /** @param {number} norm -1..1 @param {number} rangeSemis pitch bend range */
+    setPitchBend: (norm, rangeSemis) => node.port.postMessage({ type: 'pitchBend', semis: norm * rangeSemis }),
+    /** @param {number} value 0..1 modulation wheel position */
+    setModWheel: (value) => node.port.postMessage({ type: 'controllers', wheel: value }),
+    /** @param {{range:number,pitch:number,amp:number}} r mod-wheel routing */
+    setModRouting: (r) => node.port.postMessage({ type: 'controllers', range: r.range, pitch: r.pitch, amp: r.amp })
   };
 }

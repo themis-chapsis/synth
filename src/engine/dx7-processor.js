@@ -485,6 +485,10 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
     this.voiceData = defaultVoice();
     this.opOnOff = [true, true, true, true, true, true];
     this.lfo = new LFO(sampleRate);
+    // Performance controllers (spec section 2): pitch bend in semitones,
+    // and the modulation wheel with its FUNCTION-mode routing.
+    this.bendSemis = 0;
+    this.mod = { wheel: 0, range: 99, pitch: 1, amp: 0 };
     this.port.onmessage = (e) => this.handleMessage(e.data);
   }
 
@@ -544,6 +548,16 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
         if (msg.opOnOff) this.opOnOff = msg.opOnOff;
         for (const v of this.voices) if (v.active) this.configureVoice(v);
         break;
+      case 'pitchBend':
+        this.bendSemis = msg.semis;
+        break;
+      case 'controllers':
+        // Mod-wheel position and/or its routing; update whatever is sent.
+        if (msg.wheel !== undefined) this.mod.wheel = msg.wheel;
+        if (msg.range !== undefined) this.mod.range = msg.range;
+        if (msg.pitch !== undefined) this.mod.pitch = msg.pitch;
+        if (msg.amp !== undefined) this.mod.amp = msg.amp;
+        break;
     }
   }
 
@@ -580,6 +594,15 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
     const delaySec = LFO.delayToSeconds(this.voiceData[IDX_LFO_DELAY]);
     const fadeSec = Math.max(0.05, delaySec * 0.5);
 
+    // Global pitch bend (all voices), and the mod-wheel contribution to
+    // the LFO depth. The wheel adds to the voice's own PMD/AMD, routed to
+    // pitch and/or amplitude per FUNCTION mode; it responds immediately
+    // (no LFO delay ramp), unlike the voice's own modulation.
+    const bendFactor = 2 ** (this.bendSemis / 12);
+    const wheelAmt = this.mod.wheel * (this.mod.range / 99);
+    const wheelPitch = this.mod.pitch ? wheelAmt : 0;
+    const wheelAmp = this.mod.amp ? wheelAmt : 0;
+
     for (const v of this.voices) {
       if (!v.active) continue;
 
@@ -587,12 +610,12 @@ class DX7Processor extends (globalThis.AudioWorkletProcessor ?? class {}) {
       const ramp = delaySec === 0 ? 1 : Math.min(1, Math.max(0, (v.age - delaySec) / fadeSec));
       v.age += n / sampleRate;
 
-      const pitchSemis = v.pitchEg.tickBlock(n) + lfoVal * pmd * pmsSemis * ramp;
-      const pitchFactor = 2 ** (pitchSemis / 12);
+      const pitchSemis = v.pitchEg.tickBlock(n) + lfoVal * pmsSemis * (pmd * ramp + wheelPitch);
+      const pitchFactor = 2 ** (pitchSemis / 12) * bendFactor;
       // Amp modulation: unipolar attenuation, depth per op from AMS 0-3
       // (provisional: up to -24 dB at full sensitivity and depth).
       const lfoUni = (1 - lfoVal) / 2;
-      const amAtten = lfoUni * amd * ramp * 24;
+      const amAtten = lfoUni * (amd * ramp + wheelAmp) * 24;
 
       for (let i = 0; i < n; i++) {
         // Operators run high to low: every modulator except the feedback

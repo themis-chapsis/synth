@@ -18,7 +18,7 @@
  * marked PROVISIONAL.
  */
 
-export const VIEW = { w: 1920, h: 916 };
+export const VIEW = { w: 1920, h: 1160 };
 
 /** Full-width divider between the top control zone and the button zones. */
 export const divider = { y: 372, x1: 24, x2: 1896 };
@@ -182,3 +182,39 @@ export const functionBrackets = [
 export function buttonCenterX(n) {
   return MATRIX.x0 + ((n - 1) % 16) * MATRIX.pitch + MATRIX.btnW / 2;
 }
+
+/* ------------------------------------------------------------------ *
+ * Performance row: pitch-bend + modulation wheels (left, aligned to   *
+ * the panel's left edge) and a 5-octave keyboard (right, aligned to   *
+ * the panel's right edge), separated by a clear gap.                  *
+ * ------------------------------------------------------------------ */
+
+/** Second divider, between the button zones and the performance row. */
+export const divider2 = { y: 940, x1: 24, x2: 1896 };
+
+const ROW3_Y = 972;
+const WHEEL_H = 150;
+
+export const wheels = [
+  // kind 'bend' spring-returns to center (0); 'mod' holds its position.
+  { id: 'wheel-bend', kind: 'bend', label: 'PITCH BEND', x: 36, y: ROW3_Y, w: 70, h: WHEEL_H },
+  { id: 'wheel-mod', kind: 'mod', label: 'MODULATION', x: 124, y: ROW3_Y, w: 70, h: WHEEL_H }
+];
+
+/**
+ * 5-octave keyboard, 61 keys C1..C6 (Yamaha naming; MIDI 36..96 here so
+ * the mapped QWERTY range and middle C fall inside it). Right edge is
+ * flush with the panel's right content edge (1896).
+ */
+export const keyboard = (() => {
+  const keys = 61;
+  const startMidi = 36;
+  const whiteCount = 36; // 5 octaves of 7 whites + top C
+  const right = 1896;
+  const whiteW = 45;
+  const x = right - whiteCount * whiteW; // 276
+  return {
+    x, y: ROW3_Y, startMidi, keys,
+    whiteW, whiteH: WHEEL_H, blackW: 27, blackH: 96
+  };
+})();

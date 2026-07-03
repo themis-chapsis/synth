@@ -11,9 +11,9 @@
 
 import { colors } from './colors.js';
 import {
-  VIEW, divider, sliders, modeButtons, modeBrackets, display,
+  VIEW, divider, divider2, sliders, modeButtons, modeBrackets, display,
   numberedButtons, matrix, editLegends, functionLegends,
-  editBrackets, functionBrackets, buttonCenterX
+  editBrackets, functionBrackets, buttonCenterX, wheels
 } from './panelLayout.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -82,10 +82,12 @@ function brushedBackground(defs) {
   // Top and bottom machined edges of the strip.
   g.appendChild(el('rect', { x: 0, y: 0, width: VIEW.w, height: 1.2, fill: '#2e3132' }));
   g.appendChild(el('rect', { x: 0, y: VIEW.h - 1.2, width: VIEW.w, height: 1.2, fill: '#000000' }));
-  // Divider between the top control zone and the button zones: an engraved
-  // groove (dark line with a light lower highlight).
-  g.appendChild(el('rect', { x: divider.x1, y: divider.y, width: divider.x2 - divider.x1, height: 1, fill: '#000000' }));
-  g.appendChild(el('rect', { x: divider.x1, y: divider.y + 1, width: divider.x2 - divider.x1, height: 0.8, fill: '#2e3132', opacity: 0.7 }));
+  // Dividers between the top control zone / button zones / performance
+  // row: engraved grooves (dark line with a light lower highlight).
+  for (const d of [divider, divider2]) {
+    g.appendChild(el('rect', { x: d.x1, y: d.y, width: d.x2 - d.x1, height: 1, fill: '#000000' }));
+    g.appendChild(el('rect', { x: d.x1, y: d.y + 1, width: d.x2 - d.x1, height: 0.8, fill: '#2e3132', opacity: 0.7 }));
+  }
   return g;
 }
 
@@ -118,6 +120,11 @@ function silkscreen() {
   }
   for (const br of modeBrackets) {
     g.appendChild(bracket(br.x1, br.x2, br.y, br.label, green));
+  }
+
+  // Wheel labels, centered under each wheel in the performance row.
+  for (const w of wheels) {
+    g.appendChild(text(w.label, w.x + w.w / 2, w.y + w.h + 22, { size: 12, fill: green, weight: 600, spacing: 0.4 }));
   }
 
   // Numbered-button matrix silkscreen. Green EDIT legends sit above each
@@ -214,6 +221,8 @@ export function renderPanel() {
   for (const s of sliders) addSlot(s.id);
   for (const b of modeButtons) addSlot(b.id);
   for (const b of numberedButtons) addSlot(b.id);
+  for (const w of wheels) addSlot(w.id);
+  addSlot('keyboard');
   addSlot('lcd');
   addSlot('led');
 

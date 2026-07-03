@@ -8,9 +8,11 @@ import { applyColors } from './panel/colors.js';
 import { renderPanel, finalizeSilkscreen } from './panel/Panel.js';
 import { MembraneButton } from './panel/MembraneButton.js';
 import { Slider } from './panel/Slider.js';
+import { Wheel } from './panel/Wheel.js';
+import { Keyboard } from './panel/Keyboard.js';
 import { LCD } from './panel/LCD.js';
 import { SevenSegment } from './panel/SevenSegment.js';
-import { sliders, modeButtons, numberedButtons, display } from './panel/panelLayout.js';
+import { sliders, modeButtons, numberedButtons, display, wheels, keyboard } from './panel/panelLayout.js';
 import { store } from './state/store.js';
 import { createEngine } from './engine/audio-worklet.js';
 import { installKeyboardMap, bindingHelp } from './panel/keyboardMap.js';
@@ -66,16 +68,42 @@ function boot() {
     }, 16);
   };
 
+  // Performance controllers: wheel positions pushed to the engine, and
+  // re-pushed when the engine boots or the FUNCTION-mode routing changes.
+  let onscreenKeyboard = null;
+  let bendValue = 0;
+  let modValue = 0;
+  const pushBend = () => engine?.setPitchBend(bendValue, store.getState().funcValues.pitchBendRange);
+  const pushMod = () => engine?.setModWheel(modValue);
+  const pushRouting = () => {
+    const f = store.getState().funcValues;
+    engine?.setModRouting({ range: f.modWheelRange, pitch: f.modWheelPitch, amp: f.modWheelAmp });
+  };
+
   const ensureEngine = () => {
     enginePromise ??= createEngine(volume).then((e) => {
       engine = e;
       syncVoice();
+      pushRouting();
+      pushBend();
+      pushMod();
       return e;
     });
     return enginePromise;
   };
   window.addEventListener('pointerdown', ensureEngine, { once: true });
   window.addEventListener('keydown', ensureEngine, { once: true });
+
+  // Central note gateway: drives the engine and lights the on-screen key,
+  // so QWERTY, the mouse keyboard, and the engine all share one path.
+  const noteOn = (midi, velocity) => {
+    ensureEngine().then((e) => e.noteOn(midi, velocity));
+    onscreenKeyboard?.setActive(midi, true);
+  };
+  const noteOff = (midi) => {
+    ensureEngine().then((e) => e.noteOff(midi));
+    onscreenKeyboard?.setActive(midi, false);
+  };
 
   // `?` help overlay listing every binding (spec 12.2).
   const help = document.createElement('div');
@@ -99,8 +127,8 @@ function boot() {
   };
 
   installKeyboardMap({
-    noteOn: (note, velocity) => ensureEngine().then((e) => e.noteOn(note, velocity)),
-    noteOff: (note) => ensureEngine().then((e) => e.noteOff(note)),
+    noteOn,
+    noteOff,
     adjust: (delta) => store.dispatch({ type: 'adjustParam', delta }),
     pressButton,
     navigate: (delta) => store.dispatch({ type: 'navigateParam', delta }),
@@ -123,6 +151,15 @@ function boot() {
       }
     });
   }
+
+  // Performance row: pitch-bend + modulation wheels, then the keyboard.
+  for (const def of wheels) {
+    new Wheel(slots.get(def.id), def, (v) => {
+      if (def.kind === 'bend') { bendValue = v; ensureEngine().then(pushBend); }
+      else { modValue = v; ensureEngine().then(pushMod); }
+    });
+  }
+  onscreenKeyboard = new Keyboard(slots.get('keyboard'), keyboard, { noteOn, noteOff });
 
   /** @type {Map<string, MembraneButton>} */
   const buttons = new Map();
@@ -149,6 +186,10 @@ function boot() {
     buttons.get('mem-select-crt').setLit(state.bank === 'cartridge');
     buttons.get('mem-protect-int').setLit(state.memoryProtect.internal);
     buttons.get('mem-protect-crt').setLit(state.memoryProtect.cartridge);
+    // Keep the engine's controller routing in step with FUNCTION-mode
+    // edits (pitch-bend range, mod-wheel range/assign).
+    pushRouting();
+    pushBend();
   };
   store.subscribe(sync);
   sync(store.getState());
