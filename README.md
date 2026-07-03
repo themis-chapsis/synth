@@ -1,4 +1,4 @@
-# FM6 — a browser FM synthesizer
+# FM6 — a lightweight, browser FM synthesizer from the 80's
 
 A playable, browser-based recreation of the control panel of a classic
 1983 6-operator FM synthesizer, driven by a custom FM sound engine built
