@@ -2,7 +2,8 @@
 
 A playable, browser-based recreation of the control panel of a classic
 1983 6-operator FM synthesizer, driven by a custom FM sound engine built
-from scratch with the Web Audio API. No plugins, no install, no account.
+from scratch with the Web Audio API. No plugins, no install, no account —
+and it's **MIDI-ready**: plug a MIDI keyboard into Chrome and play.
 
 ![The FM6 panel](docs/panel.png)
 
@@ -24,6 +25,10 @@ browser.
 
 ## Playing
 
+- **MIDI keyboard (plug-and-play):** it's **MIDI-ready** — plug a USB MIDI
+  keyboard into Chrome, allow MIDI access when asked, and play. Note
+  velocity, the pitch-bend wheel, and the modulation wheel (CC 1) all
+  work, and your playing lights up the on-screen keys.
 - **Computer keyboard:** the letter keys `A S D F G H J K L ;` are the
   white keys (from middle C), `W E T Y U O P` the black keys. Hold
   **Shift** for a harder/louder note.

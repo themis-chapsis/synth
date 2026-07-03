@@ -53,7 +53,8 @@ export const bindingHelp = [
   ['Alt+F', 'FUNCTION'],
   ['Space', 'repeat last button'],
   ['Escape', 'back to PLAY'],
-  ['?', 'toggle this overlay']
+  ['?', 'toggle this overlay'],
+  ['MIDI keyboard', 'plug in (Chrome) - plays, with pitch bend + mod wheel']
 ];
 
 /** Digit code -> button number under (shift, alt) modifiers. */

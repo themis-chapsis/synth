@@ -16,6 +16,7 @@ import { sliders, modeButtons, numberedButtons, display, wheels, keyboard } from
 import { store } from './state/store.js';
 import { createEngine } from './engine/audio-worklet.js';
 import { installKeyboardMap, bindingHelp } from './panel/keyboardMap.js';
+import { installMidi, routeMidiMessage } from './engine/midi.js';
 import { parseBulkDump } from './sysex/dx7-sysex.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -160,13 +161,28 @@ function boot() {
   }
 
   // Performance row: pitch-bend + modulation wheels, then the keyboard.
+  const wheelInstances = {};
   for (const def of wheels) {
-    new Wheel(slots.get(def.id), def, (v) => {
+    wheelInstances[def.kind] = new Wheel(slots.get(def.id), def, (v) => {
       if (def.kind === 'bend') { bendValue = v; ensureEngine().then(pushBend); }
       else { modValue = v; ensureEngine().then(pushMod); }
     });
   }
   onscreenKeyboard = new Keyboard(slots.get('keyboard'), keyboard, { noteOn, noteOff });
+
+  // Web MIDI input (plug-and-play): a MIDI keyboard drives the same
+  // note/wheel paths as the on-screen controls — moving a wheel's setValue
+  // also updates its visual and pushes to the engine.
+  const midiHandlers = {
+    noteOn,
+    noteOff,
+    pitchBend: (v) => wheelInstances.bend?.setValue(v),
+    modWheel: (v) => wheelInstances.mod?.setValue(v),
+    allOff: () => ensureEngine().then((e) => e && e.allOff()),
+    onStatus: (s, name) => console.info('[midi]', s, name || '')
+  };
+  // Not awaited, so the permission prompt never blocks the rest of setup.
+  installMidi(midiHandlers).catch(() => {});
 
   /** @type {Map<string, MembraneButton>} */
   const buttons = new Map();
@@ -240,7 +256,11 @@ function boot() {
   });
 
   // Debug/testing handle (used by the headless interaction checks).
-  window.__fm6 = { store, ensureEngine, loadSysex, get engine() { return engine; } };
+  window.__fm6 = {
+    store, ensureEngine, loadSysex,
+    feedMidi: (data) => routeMidiMessage(data, midiHandlers), // inject a raw MIDI message
+    get engine() { return engine; }
+  };
 }
 
 boot();
