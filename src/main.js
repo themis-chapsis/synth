@@ -45,10 +45,7 @@ function boot() {
   finalizeSilkscreen(svg);
   document.fonts.ready.then(() => finalizeSilkscreen(svg));
 
-  // Audio starts lazily on the first user gesture (browser autoplay
-  // policy); until then VOLUME just remembers its position.
   let engine = null;
-  let enginePromise = null;
   let volume = sliders.find((s) => s.id === 'volume').initial;
 
   // Voice parameter sync to the worklet, batched to one message per
@@ -80,28 +77,38 @@ function boot() {
     engine?.setModRouting({ range: f.modWheelRange, pitch: f.modWheelPitch, amp: f.modWheelAmp });
   };
 
-  const ensureEngine = () => {
-    enginePromise ??= createEngine(volume).then((e) => {
+  // Build the engine eagerly. The AudioContext starts suspended (browsers
+  // only let audio start from a user gesture), so it is resumed from the
+  // persistent gesture listeners below — resuming can't be awaited inside
+  // createEngine without hanging the promise.
+  const enginePromise = createEngine(volume)
+    .then((e) => {
       engine = e;
+      e.ctx.resume().catch(() => {});
       syncVoice();
       pushRouting();
       pushBend();
       pushMod();
       return e;
-    });
-    return enginePromise;
-  };
-  window.addEventListener('pointerdown', ensureEngine, { once: true });
-  window.addEventListener('keydown', ensureEngine, { once: true });
+    })
+    .catch((err) => { console.error('[engine] init failed:', err); });
+  const ensureEngine = () => enginePromise;
+
+  // Every user gesture nudges the (suspended) context toward running; a
+  // no-op once it is already running.
+  const resumeAudio = () => { if (engine && engine.ctx.state !== 'running') engine.ctx.resume().catch(() => {}); };
+  window.addEventListener('pointerdown', resumeAudio, true);
+  window.addEventListener('keydown', resumeAudio, true);
 
   // Central note gateway: drives the engine and lights the on-screen key,
   // so QWERTY, the mouse keyboard, and the engine all share one path.
   const noteOn = (midi, velocity) => {
-    ensureEngine().then((e) => e.noteOn(midi, velocity));
+    resumeAudio();
+    ensureEngine().then((e) => e && e.noteOn(midi, velocity));
     onscreenKeyboard?.setActive(midi, true);
   };
   const noteOff = (midi) => {
-    ensureEngine().then((e) => e.noteOff(midi));
+    ensureEngine().then((e) => e && e.noteOff(midi));
     onscreenKeyboard?.setActive(midi, false);
   };
 

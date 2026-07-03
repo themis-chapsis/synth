@@ -64,21 +64,23 @@ export class MembraneButton {
     sheen.setAttribute('stroke-width', 0.7);
     slot.appendChild(sheen);
 
-    // Legend type scales with the button so it reads at any panel size.
-    const charSize = Math.max(6, Math.round(def.h * 0.18));
-    const numSize = Math.round(def.h * 0.38);
+    // The two legends on each button match the original: a large white
+    // bold Helvetica digit, and a smaller dark reference character in the
+    // top-right corner (the SysEx key). Both use a normal (non-condensed)
+    // sans for legibility, per the reference photos.
+    const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+    const charSize = Math.max(7, Math.round(def.h * 0.22));
+    const numSize = Math.round(def.h * 0.40);
 
     if (def.char) {
-      // Voice-name character legend in the button corner (manual:
-      // "reversed dark brown type in the right corner of most buttons").
       const ch = document.createElementNS(SVG_NS, 'text');
-      ch.setAttribute('x', def.x + def.w - charSize * 0.6);
-      ch.setAttribute('y', def.y + charSize + 2);
+      ch.setAttribute('x', def.x + def.w - 4);
+      ch.setAttribute('y', def.y + charSize + 3);
       ch.setAttribute('text-anchor', 'end');
-      ch.setAttribute('font-family', "'Barlow Condensed', 'Arial Narrow', sans-serif");
+      ch.setAttribute('font-family', SANS);
       ch.setAttribute('font-size', charSize);
-      ch.setAttribute('font-weight', 600);
-      ch.setAttribute('fill', '#31241a');
+      ch.setAttribute('font-weight', 700);
+      ch.setAttribute('fill', '#123a34'); // dark teal, legible on the green
       ch.textContent = def.char;
       ch.style.pointerEvents = 'none';
       slot.appendChild(ch);
@@ -87,13 +89,12 @@ export class MembraneButton {
     if (def.number != null) {
       const num = document.createElementNS(SVG_NS, 'text');
       num.setAttribute('x', def.x + def.w / 2);
-      num.setAttribute('y', def.y + def.h / 2 + numSize * 0.36);
+      num.setAttribute('y', def.y + def.h / 2 + numSize * 0.35);
       num.setAttribute('text-anchor', 'middle');
-      num.setAttribute('font-family', "'Barlow Condensed', 'Arial Narrow', sans-serif");
+      num.setAttribute('font-family', SANS);
       num.setAttribute('font-size', numSize);
-      num.setAttribute('font-weight', 600);
-      // Spec section 2: white middle label (the number) on the cyan button.
-      num.setAttribute('fill', '#f4f6f6');
+      num.setAttribute('font-weight', 700);
+      num.setAttribute('fill', '#ffffff');
       num.textContent = String(def.number);
       num.style.pointerEvents = 'none';
       slot.appendChild(num);

@@ -93,8 +93,9 @@ function brushedBackground(defs) {
 
 function silkscreen() {
   const g = el('g', { id: 'layer-silkscreen' });
-  const green = colors.silkscreenGreen;
-  const orange = colors.silkscreenOrange;
+  const green = colors.silkscreenGreen; // FM6 branding, slider/wheel labels
+  const editCol = colors.silkscreenEdit; // EDIT legends + brackets (periwinkle)
+  const orange = colors.silkscreenOrange; // FUNCTION legends + brackets (gold)
   const white = colors.silkscreenWhite;
 
   // Generic model name, no trademarked branding (spec section 18).
@@ -119,7 +120,7 @@ function silkscreen() {
     g.appendChild(text(b.label, b.x + b.w / 2, yBase, { size: 18, fill: white, weight: 500, spacing: 0.3 }));
   }
   for (const br of modeBrackets) {
-    g.appendChild(bracket(br.x1, br.x2, br.y, br.label, green));
+    g.appendChild(bracket(br.x1, br.x2, br.y, br.label, white));
   }
 
   // Wheel labels, centered under each wheel in the performance row.
@@ -142,7 +143,7 @@ function silkscreen() {
     const edit = editLegends[n - 1];
     if (edit) {
       const lines = edit.split('\n').length;
-      g.appendChild(text(edit, cx, btnTop - 26 - (lines - 1) * LINE, { size: LEG, fill: green, weight: 500 }));
+      g.appendChild(text(edit, cx, btnTop - 26 - (lines - 1) * LINE, { size: LEG, fill: editCol, weight: 500 }));
     }
     const fn = functionLegends[n - 1];
     if (fn) {
@@ -156,7 +157,7 @@ function silkscreen() {
   for (const br of editBrackets) {
     const [x1, x2] = spanX(br);
     const row = br.from <= 16 ? 0 : 1;
-    g.appendChild(bracket(x1, x2, m.rowY[row] - 84, br.label, green));
+    g.appendChild(bracket(x1, x2, m.rowY[row] - 84, br.label, editCol));
   }
   for (const br of functionBrackets) {
     const [x1, x2] = spanX(br);

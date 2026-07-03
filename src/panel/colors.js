@@ -11,20 +11,29 @@ export const colors = {
   panelBg: '#0d0e0e',
   panelBgHi: '#1a1c1c',
 
-  buttonCyan: '#5fb8c9',
-  buttonCyanPressed: '#8fd2de',
-  buttonBlueLight: '#a8c8d8',
-  buttonBlueLightPressed: '#c6dde8',
-  buttonOrange: '#c66a5a',
-  buttonOrangePressed: '#dd8f80',
-  buttonCream: '#ded6c1',
-  buttonCreamPressed: '#f0ead9',
-  buttonYellow: '#d4a24a',
-  buttonYellowPressed: '#e6bd72',
+  // Button colours sampled to match the original DX7 (see reference
+  // photos). The panel is colour-coded: green = numbered params + memory
+  // (select/protect) + NO/YES; periwinkle = the EDIT-navigation buttons
+  // (operator select, edit/compare) and the green-legend params above the
+  // 32 buttons; red = STORE; tan = FUNCTION and the gold legends below.
+  buttonCyan: '#33c9ad', // numbered buttons + memory select (green)
+  buttonCyanPressed: '#63e0c9',
+  buttonBlueLight: '#8f97e0', // operator select + edit/compare (periwinkle)
+  buttonBlueLightPressed: '#adb4ee',
+  buttonOrange: '#de6d5b', // STORE (red)
+  buttonOrangePressed: '#ec8a7b',
+  buttonCream: '#33c9ad', // memory protect + NO/YES (same green)
+  buttonCreamPressed: '#63e0c9',
+  buttonYellow: '#ddb184', // FUNCTION (tan)
+  buttonYellowPressed: '#ecc9a6',
 
-  silkscreenGreen: '#7fb56a',
+  // Silkscreen legend colours: EDIT params (above the 32 buttons) in
+  // periwinkle to match the blue EDIT buttons; FUNCTION params (below) in
+  // gold; mode-cluster labels/brackets in white.
+  silkscreenGreen: '#7fb56a', // FM6 branding, slider + wheel labels
+  silkscreenEdit: '#bcc4ea', // EDIT-mode legends + their brackets
   silkscreenWhite: '#e8e6e0',
-  silkscreenOrange: '#c68a3a',
+  silkscreenOrange: '#d0a860', // FUNCTION-mode legends + their brackets
 
   ledRed: '#ff4020',
   ledRedDim: '#ff4020', // drawn at 15% opacity for ghost segments

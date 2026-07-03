@@ -43,7 +43,11 @@ export async function createEngine(initialVolume = 0.8) {
   const masterGain = ctx.createGain();
   masterGain.gain.value = initialVolume;
   node.connect(masterGain).connect(ctx.destination);
-  await ctx.resume();
+  // NOTE: do not `await ctx.resume()` here. resume() only settles inside a
+  // user-gesture task; called after the awaits above it stays pending
+  // forever and the whole engine promise hangs (no sound). The context is
+  // resumed from a persistent gesture listener in main.js instead.
+  ctx.resume().catch(() => {});
 
   return {
     ctx,
