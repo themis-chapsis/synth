@@ -1,18 +1,23 @@
 /**
- * Pitch-bend / modulation wheel (performance row).
+ * Pitch-bend / modulation wheel (performance row), styled after the
+ * original: a slim ribbed cylinder recessed in a panel slot, seen edge-on.
  *
- * A vertical thumb wheel: drag up/down to change value. Two behaviors:
- * - kind 'bend': value is bipolar -1..1 with a centre detent; the wheel
- *   spring-returns to 0 on release (the pitch-bend wheel is sprung).
- * - kind 'mod': value is unipolar 0..1 and stays where it is left.
+ * Behaviour:
+ * - kind 'bend': bipolar -1..1 with a centre detent; spring-returns to 0
+ *   on release (the pitch-bend wheel is sprung).
+ * - kind 'mod': unipolar 0..1 and stays where it is left.
  *
- * Rendered as a cylinder (vertical gradient + ridges) inside a recessed
- * slot, with a bright indicator that tracks the value.
+ * Look: a horizontal cylinder-shading gradient (dark edges, lit centre),
+ * many fine horizontal ridges that scroll vertically as the wheel turns
+ * (so it reads as rotation, not a slider), a soft vertical specular, and
+ * dark caps where the wheel enters the slot.
  */
 
 import { colors } from './colors.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const RIDGE_GAP = 6; // ridge spacing in viewBox units
+const SCROLL = 46; // px the ridges travel across the value range
 
 export class Wheel {
   /**
@@ -23,7 +28,7 @@ export class Wheel {
   constructor(slot, def, onChange) {
     this.def = def;
     this.onChange = onChange;
-    this.value = 0; // bend: -1..1, mod: 0..1
+    this.value = 0;
     this.dragging = false;
     this.raf = null;
 
@@ -34,51 +39,47 @@ export class Wheel {
       return n;
     };
 
+    const { x, y, w, h, id } = def;
     const defs = mk('defs', {});
-    const gid = `wheel-grad-${def.id}`;
-    const grad = mk('linearGradient', { id: gid, x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
-    for (const [off, col] of [[0, '#0a0b0b'], [0.16, '#3a3d3d'], [0.5, '#6b6f6f'], [0.84, '#3a3d3d'], [1, '#0a0b0b']]) {
-      mk('stop', { offset: off, 'stop-color': col }, grad);
+    // Cylinder shading across the width (dark edges -> lit centre).
+    const cyl = mk('linearGradient', { id: `cyl-${id}`, x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
+    for (const [o, c] of [[0, '#050606'], [0.14, '#2a2d2d'], [0.5, '#5c6060'], [0.86, '#2a2d2d'], [1, '#050606']]) {
+      mk('stop', { offset: o, 'stop-color': c }, cyl);
     }
+    // Clip so the scrolling ridges stay inside the wheel body.
+    const clip = mk('clipPath', { id: `clip-${id}` }, defs);
+    mk('rect', { x, y, width: w, height: h, rx: 6 }, clip);
 
-    // Recessed slot.
-    mk('rect', {
-      x: def.x - 3, y: def.y - 3, width: def.w + 6, height: def.h + 6, rx: 8,
-      fill: colors.sliderTrack, stroke: '#000', 'stroke-width': 1
-    });
-    // Cylinder body.
-    mk('rect', {
-      x: def.x, y: def.y, width: def.w, height: def.h, rx: 7,
-      fill: `url(#${gid})`, stroke: '#000', 'stroke-width': 0.8
-    });
-    // Horizontal grip ridges.
-    for (let i = 1; i < 22; i++) {
-      const yy = def.y + (i / 22) * def.h;
-      mk('rect', { x: def.x + 2, y: yy, width: def.w - 4, height: 0.8, fill: '#000', opacity: 0.28 });
-    }
-    // Centre detent marker for the bend wheel.
-    if (def.kind === 'bend') {
-      mk('rect', { x: def.x - 5, y: def.y + def.h / 2 - 1, width: 4, height: 2, fill: colors.silkscreenWhite, opacity: 0.7 });
-    }
+    // Panel slot / recess around the wheel.
+    mk('rect', { x: x - 5, y: y - 8, width: w + 10, height: h + 16, rx: 7, fill: '#0a0b0b', stroke: '#000', 'stroke-width': 1 });
 
-    // Moving indicator band.
-    this.indicator = mk('rect', {
-      x: def.x + 1.5, width: def.w - 3, height: 6, rx: 2,
-      fill: def.kind === 'bend' ? '#c66a5a' : '#d4a24a', opacity: 0.95
-    });
+    // Wheel body.
+    mk('rect', { x, y, width: w, height: h, rx: 6, fill: `url(#cyl-${id})`, stroke: '#000', 'stroke-width': 1 });
+
+    // Scrolling ridge group (clipped to the body).
+    const ridged = mk('g', { 'clip-path': `url(#clip-${id})` });
+    this.ridges = mk('g', {}, ridged);
+    // Draw ridges over a range taller than the body so scrolling never
+    // reveals an edge.
+    for (let ry = y - h; ry < y + 2 * h; ry += RIDGE_GAP) {
+      mk('rect', { x: x + 1.5, y: ry, width: w - 3, height: 1, fill: '#000', opacity: 0.5 }, this.ridges);
+      mk('rect', { x: x + 1.5, y: ry + 2, width: w - 3, height: 1, fill: '#ffffff', opacity: 0.07 }, this.ridges);
+    }
+    // Soft vertical specular down the lit centre.
+    mk('rect', { x: x + w * 0.42, y, width: w * 0.16, height: h, fill: '#ffffff', opacity: 0.10 }, ridged);
+
+    // Dark caps where the wheel curves into the slot.
+    mk('rect', { x, y: y - 1, width: w, height: 12, rx: 5, fill: '#000', opacity: 0.55 });
+    mk('rect', { x, y: y + h - 11, width: w, height: 12, rx: 5, fill: '#000', opacity: 0.55 });
 
     this.svg = slot.ownerSVGElement ?? slot.closest('svg');
     slot.style.cursor = 'ns-resize';
     slot.style.touchAction = 'none';
 
     const toValue = (clientY) => {
-      const top = def.y;
-      const bot = def.y + def.h;
-      const py = this.clientToPanelY(clientY);
-      const t = Math.min(1, Math.max(0, (py - top) / (bot - top))); // 0 top .. 1 bottom
+      const t = Math.min(1, Math.max(0, (this.clientToPanelY(clientY) - y) / h)); // 0 top..1 bottom
       return def.kind === 'bend' ? (0.5 - t) * 2 : (1 - t);
     };
-
     slot.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       slot.setPointerCapture(e.pointerId);
@@ -86,9 +87,7 @@ export class Wheel {
       cancelAnimationFrame(this.raf);
       this.setValue(toValue(e.clientY));
     });
-    slot.addEventListener('pointermove', (e) => {
-      if (this.dragging) this.setValue(toValue(e.clientY));
-    });
+    slot.addEventListener('pointermove', (e) => { if (this.dragging) this.setValue(toValue(e.clientY)); });
     const end = () => {
       if (!this.dragging) return;
       this.dragging = false;
@@ -97,7 +96,7 @@ export class Wheel {
     slot.addEventListener('pointerup', end);
     slot.addEventListener('pointercancel', end);
 
-    this.setValue(0);
+    this.setValue(0, false);
   }
 
   clientToPanelY(clientY) {
@@ -107,19 +106,19 @@ export class Wheel {
 
   setValue(v, notify = true) {
     this.value = v;
-    const { x, y, w, h, kind } = this.def;
-    // Indicator y: value 1 -> top, value -1/0 bottom.
-    const t = kind === 'bend' ? (0.5 - v / 2) : (1 - v);
-    this.indicator.setAttribute('y', y + t * (h - 6));
+    // Scroll the ridges: turning the wheel up (+) rolls the surface down.
+    const norm = this.def.kind === 'bend' ? v : v * 2 - 1; // -1..1
+    const off = (-norm * SCROLL) % RIDGE_GAP;
+    this.ridges.setAttribute('transform', `translate(0 ${off})`);
     if (notify && this.onChange) this.onChange(v);
   }
 
-  /** Ease the bend wheel back to centre over ~120 ms. */
+  /** Ease the bend wheel back to centre over ~130 ms. */
   springToCenter() {
     const start = this.value;
     const t0 = performance.now();
     const step = () => {
-      const k = Math.min(1, (performance.now() - t0) / 120);
+      const k = Math.min(1, (performance.now() - t0) / 130);
       const eased = 1 - (1 - k) * (1 - k);
       this.setValue(start * (1 - eased));
       if (k < 1) this.raf = requestAnimationFrame(step);

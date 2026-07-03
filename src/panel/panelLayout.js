@@ -197,8 +197,11 @@ const WHEEL_H = 150;
 
 export const wheels = [
   // kind 'bend' spring-returns to center (0); 'mod' holds its position.
-  { id: 'wheel-bend', kind: 'bend', label: 'PITCH BEND', x: 36, y: ROW3_Y, w: 70, h: WHEEL_H },
-  { id: 'wheel-mod', kind: 'mod', label: 'MODULATION', x: 124, y: ROW3_Y, w: 70, h: WHEEL_H }
+  // Each wheel has a label above and a vertical scale to its right (the
+  // pitch wheel a UP/0/DOWN spindle, the mod wheel a MIN..MAX line),
+  // matching the original.
+  { id: 'wheel-bend', kind: 'bend', label: 'PITCH', x: 34, y: ROW3_Y, w: 48, h: WHEEL_H, scaleX: 95, scale: 'pitch' },
+  { id: 'wheel-mod', kind: 'mod', label: 'MODULATION', x: 150, y: ROW3_Y, w: 48, h: WHEEL_H, scaleX: 211, scale: 'mod' }
 ];
 
 /**

@@ -123,9 +123,29 @@ function silkscreen() {
     g.appendChild(bracket(br.x1, br.x2, br.y, br.label, white));
   }
 
-  // Wheel labels, centered under each wheel in the performance row.
+  // Wheels: white label above and a white scale to the right — the pitch
+  // wheel a UP/0/DOWN spindle, the mod wheel a MIN..MAX line.
   for (const w of wheels) {
-    g.appendChild(text(w.label, w.x + w.w / 2, w.y + w.h + 22, { size: 12, fill: green, weight: 600, spacing: 0.4 }));
+    g.appendChild(text(w.label, w.x + w.w / 2, w.y - 14, { size: 12, fill: white, weight: 600, spacing: 0.5 }));
+    const sx = w.scaleX;
+    const top = w.y + 2;
+    const bot = w.y + w.h - 2;
+    const mid = w.y + w.h / 2;
+    const lab = (s, yy, anchor = 'start') => text(s, sx + 7, yy, { size: 10, fill: white, weight: 600, spacing: 0.4, anchor });
+    if (w.scale === 'pitch') {
+      // Thin spindle: points at UP/DOWN, widest at 0 (centre detent).
+      g.appendChild(el('polygon', {
+        points: `${sx},${top} ${sx + 2.6},${mid} ${sx},${bot} ${sx - 2.6},${mid}`,
+        fill: white
+      }));
+      g.appendChild(lab('UP', top + 8));
+      g.appendChild(lab('0', mid + 3));
+      g.appendChild(lab('DOWN', bot));
+    } else {
+      g.appendChild(el('rect', { x: sx - 0.6, y: top, width: 1.2, height: bot - top, fill: white }));
+      g.appendChild(lab('MAX', top + 8));
+      g.appendChild(lab('MIN', bot));
+    }
   }
 
   // Numbered-button matrix silkscreen. Green EDIT legends sit above each

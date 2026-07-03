@@ -2,7 +2,11 @@
  * 5-octave on-screen keyboard (performance row).
  *
  * Renders 61 keys (white first, black overlaid) and turns pointer input
- * into note on/off. Dragging across keys glides (legato glissando).
+ * into note on/off. Press-and-drag glides across keys (legato glissando):
+ * we do NOT capture the pointer to a single key — capture would starve the
+ * other keys of move events — instead each move hit-tests the key under the
+ * cursor with elementFromPoint and switches the sounding note.
+ *
  * `setActive(midi, on)` tints a key so the QWERTY keybed and engine can
  * light the same keys they play.
  */
@@ -13,9 +17,9 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const WHITE_PC = new Set([0, 2, 4, 5, 7, 9, 11]);
 
 const WHITE_FILL = '#e9e7df';
-const WHITE_ACTIVE = '#8fd2de';
+const WHITE_ACTIVE = '#7fe0cf';
 const BLACK_FILL = '#171a1a';
-const BLACK_ACTIVE = '#3f8fa0';
+const BLACK_ACTIVE = '#2f9f88';
 
 export class Keyboard {
   /**
@@ -30,6 +34,7 @@ export class Keyboard {
     this.keyEls = new Map();
     this.activeCount = new Map(); // midi -> highlight refcount
     this.mouseNote = null; // note currently held by the mouse drag
+    this.dragging = false;
 
     const mk = (tag, attrs) => {
       const n = document.createElementNS(SVG_NS, tag);
@@ -57,54 +62,58 @@ export class Keyboard {
       rx: 4, fill: '#050606', stroke: '#000', 'stroke-width': 1
     }));
 
-    const bind = (rect, midi) => {
-      rect.style.cursor = 'pointer';
-      rect.addEventListener('pointerdown', (e) => {
+    const makeKey = (attrs, midi) => {
+      const r = mk('rect', attrs);
+      r.dataset.midi = String(midi); // used by elementFromPoint hit-testing
+      r.style.cursor = 'pointer';
+      r.style.touchAction = 'none';
+      r.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        rect.setPointerCapture(e.pointerId);
-        this.mouseNote = midi;
-        this.handlers.noteOn(midi, 100);
+        this.dragging = true;
+        this.switchTo(midi);
       });
-      // Glissando: entering a key while the mouse is held moves the note.
-      rect.addEventListener('pointerenter', (e) => {
-        if (this.mouseNote == null || !(e.buttons & 1)) return;
-        if (this.mouseNote !== midi) {
-          this.handlers.noteOff(this.mouseNote);
-          this.mouseNote = midi;
-          this.handlers.noteOn(midi, 100);
-        }
-      });
-      rect.addEventListener('contextmenu', (e) => e.preventDefault());
+      r.addEventListener('contextmenu', (e) => e.preventDefault());
+      slot.appendChild(r);
+      this.keyEls.set(midi, r);
     };
 
     for (const w of whites) {
-      const r = mk('rect', {
+      makeKey({
         x: w.x + 0.5, y: def.y, width: def.whiteW - 1, height: def.whiteH,
         rx: 3, fill: WHITE_FILL, stroke: '#000', 'stroke-width': 0.8
-      });
-      slot.appendChild(r);
-      this.keyEls.set(w.midi, r);
-      bind(r, w.midi);
+      }, w.midi);
     }
     for (const b of blacks) {
-      const r = mk('rect', {
+      makeKey({
         x: b.x, y: def.y, width: def.blackW, height: def.blackH,
         rx: 2.5, fill: BLACK_FILL, stroke: '#000', 'stroke-width': 1
-      });
-      slot.appendChild(r);
-      this.keyEls.set(b.midi, r);
-      bind(r, b.midi);
+      }, b.midi);
     }
 
-    // Releasing anywhere ends the mouse-held note.
-    const release = () => {
+    // Drag across keys: hit-test the key under the cursor and switch note.
+    window.addEventListener('pointermove', (e) => {
+      if (!this.dragging) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const midi = el && el.dataset && el.dataset.midi != null ? Number(el.dataset.midi) : null;
+      if (midi !== this.mouseNote) this.switchTo(midi);
+    });
+    const end = () => {
+      this.dragging = false;
       if (this.mouseNote != null) {
         this.handlers.noteOff(this.mouseNote);
         this.mouseNote = null;
       }
     };
-    window.addEventListener('pointerup', release);
-    window.addEventListener('pointercancel', release);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  }
+
+  /** Move the mouse-held note to `midi` (or null = off the keys). */
+  switchTo(midi) {
+    if (midi === this.mouseNote) return;
+    if (this.mouseNote != null) this.handlers.noteOff(this.mouseNote);
+    this.mouseNote = midi;
+    if (midi != null) this.handlers.noteOn(midi, 100);
   }
 
   /** Tint a key on/off. Refcounted so overlapping sources don't fight. */
